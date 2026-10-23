@@ -1,0 +1,27 @@
+# Runs on every `git commit`. Update hook versions with: uv run pre-commit autoupdate
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      # Git LFS files are skipped; anything else over 500 KB belongs in DVC or LFS
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+        exclude: ^uv\.lock$
+      - id: detect-private-key
+  # ruff runs from the project environment, so its version comes from uv.lock
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]

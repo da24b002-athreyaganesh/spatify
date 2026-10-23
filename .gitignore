@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Secrets (commit .env.example instead)
+.env
+
+# Local MLflow files (the tracking server keeps its data in Docker volumes)
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Batches dropped in at run time; the folder itself stays
+data/incoming/*
+!data/incoming/.gitkeep
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store

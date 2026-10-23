@@ -1,0 +1,63 @@
+[project]
+name = "spatify"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Athreya G", email = "da24b002@smail.iitm.ac.in" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.5.4",
+    "pandas>=3.1.0",
+    "pyarrow>=25.0.1",
+    "pydantic>=2.14.1",
+    "pyyaml>=6.0.3",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
+]
+
+[project.optional-dependencies]
+pipeline = [
+    "dvc>=3.67.1",
+    "mlflow==3.17.1",
+    "ray[data,default]==2.59.0",
+]
+serving = [
+    "fastapi>=0.161.1",
+    "httpx>=0.28.1",
+    "prometheus-client>=0.26.0",
+    "psycopg[binary]>=3.3.6",
+    "uvicorn[standard]>=0.54.0",
+]
+frontend = [
+    "httpx>=0.28.1",
+    "prometheus-client>=0.26.0",
+    "streamlit>=1.66.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+[tool.uv]
+link-mode = "copy"   # the project is on NTFS and uv's cache on ext4, so hardlinks can't work
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.7.0",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import order, naming, bugbear, pyupgrade
+select = ["E", "W", "F", "I", "N", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
