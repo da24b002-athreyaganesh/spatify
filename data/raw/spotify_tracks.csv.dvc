@@ -1,0 +1,13 @@
+md5: 79b245d7434b898b1a04e7635b7138f9
+frozen: true
+deps:
+- checksum: '"fe78f3c61342a8b930afb94c3a48e87f848334c8343974b019e0a25937aeb2be"'
+  size: 20118244
+  hash: md5
+  path:
+    https://huggingface.co/datasets/maharshipandya/spotify-tracks-dataset/resolve/main/dataset.csv
+outs:
+- md5: e50a70711e823b75c8ebe231468f5faf
+  size: 20118244
+  hash: md5
+  path: spotify_tracks.csv
