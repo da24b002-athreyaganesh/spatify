@@ -1,0 +1,15 @@
+# All thresholds and hyperparameters live here; DVC tracks each section as stage params.
+
+batches:
+  seed: 42
+  held_out_genres: 10   # how many genres to keep out of the base set, or an explicit list
+  base_fraction: 0.8    # share of in-distribution tracks that go into the base set
+  batch_size: 2000
+  n_normal: 3
+  n_drifted: 2
+  n_shifted: 2
+  corrupt_fraction: 0.02
+  drift:                # additive shift for "drifted" batches (stand-in for an era shift)
+    energy: 0.15
+    loudness: 3.0
+    acousticness: -0.15

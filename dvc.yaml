@@ -1,0 +1,12 @@
+stages:
+  make_batches:
+    cmd: python -m spatify.batches --params params.yaml --raw
+      data/raw/spotify_tracks.csv --out data
+    deps:
+    - data/raw/spotify_tracks.csv
+    - src/spatify/batches.py
+    params:
+    - batches
+    outs:
+    - data/base
+    - data/batches

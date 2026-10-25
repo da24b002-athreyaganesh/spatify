@@ -1,7 +1,7 @@
 [project]
 name = "spatify"
 version = "0.1.0"
-description = "Add your description here"
+description = "Spatify"
 readme = "README.md"
 authors = [
     { name = "Athreya G", email = "da24b002@smail.iitm.ac.in" }

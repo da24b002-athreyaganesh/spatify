@@ -1,0 +1,40 @@
+schema: '2.0'
+stages:
+  make_batches:
+    cmd: python -m spatify.batches --params params.yaml --raw
+      data/raw/spotify_tracks.csv --out data
+    deps:
+    - path: data/raw/spotify_tracks.csv
+      hash: md5
+      md5: e50a70711e823b75c8ebe231468f5faf
+      size: 20118244
+    - path: src/spatify/batches.py
+      hash: md5
+      md5: f45fff0f953dd8d649aa518e4bda292f
+      size: 7835
+    params:
+      params.yaml:
+        batches:
+          seed: 42
+          held_out_genres: 10
+          base_fraction: 0.8
+          batch_size: 2000
+          n_normal: 3
+          n_drifted: 2
+          n_shifted: 2
+          corrupt_fraction: 0.02
+          drift:
+            energy: 0.15
+            loudness: 3.0
+            acousticness: -0.15
+    outs:
+    - path: data/base
+      hash: md5
+      md5: 95d11fe1b300d0426ae39da25f65506d.dir
+      size: 13673035
+      nfiles: 1
+    - path: data/batches
+      hash: md5
+      md5: e07b7e69c4b6bfb5a2e40466a4cb4a1c.dir
+      size: 2416951
+      nfiles: 8

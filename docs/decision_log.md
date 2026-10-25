@@ -3,7 +3,7 @@
 One entry per design decision: what was chosen, why, and what else was considered. These feed the HLD and the viva.
 
 ## D1. The repository lives in the course folder (`Project/spatify`) on the NTFS drive
-- **Why:** it keeps the code next to the course materials, on the drive with more free space (548 GB free, against 76 GB on the ext4 home partition).
+- **Why:** it keeps the code next to other course materials and keeps my stuff organised.
 - **Costs and mitigations:** NTFS (`ntfs3`) doesn't keep Unix file modes, so Git's `core.fileMode` is off and executable bits are set in the Dockerfiles rather than taken from the checkout. uv can't hardlink from its cache on ext4, so `link-mode = "copy"` is set. Service data (Postgres, MLflow, Prometheus, Grafana) lives in named Docker volumes, which sit on ext4.
 - **Considered:** `~/spatify` on ext4, which avoids these workarounds.
 - **Note:** the planning TODO stays in `Project/`, outside the repo and out of version control.
