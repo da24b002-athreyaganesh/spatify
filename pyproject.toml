@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 pipeline = [
     "dvc>=3.67.1",
+    "matplotlib>=3.11.2",
     "mlflow==3.17.1",
     "ray[data,default]==2.59.0",
 ]
@@ -61,3 +62,4 @@ select = ["E", "W", "F", "I", "N", "B", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning:ray.*"]   # Ray's own deprecation notices

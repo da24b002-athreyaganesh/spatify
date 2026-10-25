@@ -18,9 +18,6 @@ mlruns/
 mlartifacts/
 mlflow.db
 
-# Batches dropped in at run time; the folder itself stays
-data/incoming/*
-!data/incoming/.gitkeep
 
 # Editors and OS
 .vscode/

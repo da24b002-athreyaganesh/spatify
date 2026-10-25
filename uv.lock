@@ -4210,6 +4210,7 @@ frontend = [
 ]
 pipeline = [
     { name = "dvc" },
+    { name = "matplotlib" },
     { name = "mlflow" },
     { name = "ray", extra = ["data", "default"] },
 ]
@@ -4235,6 +4236,7 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'serving'", specifier = ">=0.161.1" },
     { name = "httpx", marker = "extra == 'frontend'", specifier = ">=0.28.1" },
     { name = "httpx", marker = "extra == 'serving'", specifier = ">=0.28.1" },
+    { name = "matplotlib", marker = "extra == 'pipeline'", specifier = ">=3.11.2" },
     { name = "mlflow", marker = "extra == 'pipeline'", specifier = "==3.17.1" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pandas", specifier = ">=3.1.0" },
