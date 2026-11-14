@@ -48,3 +48,24 @@ features:
     - key_cos
   reference_rows: 10000   # size of the drift-check reference sample
   seed: 42
+
+split:                    # held-out evaluation tracks, picked by a hash of track_id, so a
+  seed: 42                # track stays on the same side as the catalogue grows
+  eval_fraction: 0.1      # their genres are never used to fit a model
+
+train:
+  k: 10                   # recommendations per query when the caller doesn't say
+  feature_sets:           # features dropped from features.columns; each feature set x each
+    all: []               # weighting is one candidate model (one nested MLflow run)
+    no_tonal: [mode, key_sin, key_cos]
+    no_loudness: [loudness]          # loudness moves with energy (r = 0.76 in the EDA)
+  weightings: [uniform, fisher]      # fisher: weight features by how well they separate genres
+
+evaluate:
+  k: 10
+  queries: 2000           # seeded sample of held-out tracks, each used as a seed track
+  seed: 42
+
+register:
+  model_name: spatify
+  min_gain: 0.005         # promote only if genre match@K beats the champion by this much

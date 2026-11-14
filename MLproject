@@ -1,0 +1,16 @@
+# MLflow project: the model stages of the pipeline. DVC runs each one as
+#   mlflow run . -e <stage> --env-manager=local --experiment-name spatify
+# so every pipeline run leaves a train, an evaluate and a register run in MLflow.
+# Settings come from params.yaml (DVC tracks them), so the entry points take no parameters.
+# The data stages (ingest, validate, features) log to DVC metrics only and run without MLflow.
+name: spatify
+
+python_env: python_env.yaml
+
+entry_points:
+  train:
+    command: "python -m spatify.model.train"
+  evaluate:
+    command: "python -m spatify.model.evaluate"
+  register:
+    command: "python -m spatify.model.register"

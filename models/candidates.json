@@ -1,0 +1,48 @@
+{
+  "experiment_id": "1",
+  "train_run_id": "d7402c81701744c8b7c005952d4d11d0",
+  "candidates": [
+    {
+      "variant": "all-uniform",
+      "feature_set": "all",
+      "weighting": "uniform",
+      "run_id": "79f6570051674d9689e13b5946325254",
+      "model_uri": "models:/m-26cb30213ef74547b67d234730997f2c"
+    },
+    {
+      "variant": "all-fisher",
+      "feature_set": "all",
+      "weighting": "fisher",
+      "run_id": "5744c8cb211c4a16910594f03aee2e04",
+      "model_uri": "models:/m-184edb6d0feb4ef4ac928c8507adeb01"
+    },
+    {
+      "variant": "no_tonal-uniform",
+      "feature_set": "no_tonal",
+      "weighting": "uniform",
+      "run_id": "071d2a90d30a40198e480dff065a266d",
+      "model_uri": "models:/m-9040e5dd3e8549e6940bb0df206bd49e"
+    },
+    {
+      "variant": "no_tonal-fisher",
+      "feature_set": "no_tonal",
+      "weighting": "fisher",
+      "run_id": "c7e15880f44b4dcba94b459bc3b96bf0",
+      "model_uri": "models:/m-4015a67a4ad744929a59ae5d8e0c1d8b"
+    },
+    {
+      "variant": "no_loudness-uniform",
+      "feature_set": "no_loudness",
+      "weighting": "uniform",
+      "run_id": "bfb01114641943fe8a443729e091fdd4",
+      "model_uri": "models:/m-109da2892cae43598517165fa3ea2f39"
+    },
+    {
+      "variant": "no_loudness-fisher",
+      "feature_set": "no_loudness",
+      "weighting": "fisher",
+      "run_id": "ef34c6b26c094b5b8bb510faf2b587db",
+      "model_uri": "models:/m-7d53cb5fe1bd42c4a4ec8585619f2aee"
+    }
+  ]
+}

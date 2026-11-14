@@ -1,0 +1,44 @@
+Serving check, 2026-11-14T15:59:17+05:30: mlflow models serve -m models:/spatify@champion -p 5055 --env-manager local
+ping: HTTP 200
+== 1. seed track: Unholy (Sam Smith, Kim Petras; dance;pop), k=5
+
+$ curl -s http://127.0.0.1:5055/invocations -H 'Content-Type: application/json' -d '{"dataframe_records": [{"track_id": "3nqQXoyQOWXiESFLlDF1hG"}], "params": {"k": 5}}'
+  1. Shower                                 | Becky G                  | dance;latin;reggae;reggaeton | score 0.9509 | run 7331b2f4
+  2. Lanet                                  | Arda Gezer;Şehinşah;Cane | turkish                      | score 0.9495 | run 7331b2f4
+  3. SHADY                                  | Justin Park              | chill                        | score 0.9453 | run 7331b2f4
+  4. Super Gremlin Freestyle                | BadKidMacei              | kids                         | score 0.9448 | run 7331b2f4
+  5. Mean It                                | Lauv;LANY                | electro                      | score 0.9307 | run 7331b2f4
+ [HTTP 200, 0.021779 s]
+== 2. sliders only: high energy, danceability and valence (k=5)
+
+$ curl -s http://127.0.0.1:5055/invocations -H 'Content-Type: application/json' -d '{"dataframe_records": [{"energy": 0.9, "danceability": 0.85, "valence": 0.9}], "params": {"k": 5}}'
+  1. Tá Estourado                           | Alemão Do Forró          | forro                        | score 0.9379 | run 7331b2f4
+  2. Flashed Junk Mind                      | Milky Chance             | german                       | score 0.9351 | run 7331b2f4
+  3. Vuela Junto a Mí                       | Newen Afrobeat           | afrobeat                     | score 0.9315 | run 7331b2f4
+  4. Ise Nla                                | Tony Allen               | afrobeat                     | score 0.9233 | run 7331b2f4
+  5. Freedom of Choice - 2009 Remaster      | DEVO                     | synth-pop                    | score 0.9221 | run 7331b2f4
+ [HTTP 200, 0.007110 s]
+== 3. seed track with a slider override: Unholy, but acoustic and calm
+
+$ curl -s http://127.0.0.1:5055/invocations -H 'Content-Type: application/json' -d '{"dataframe_records": [{"track_id": "3nqQXoyQOWXiESFLlDF1hG", "acousticness": 0.9, "energy": 0.2}], "params": {"k": 5}}'
+  1. Is There Still Anything That Love Can  | RADWIMPS                 | j-pop;j-rock                 | score 0.9605 | run 7331b2f4
+  2. Believe - Acoustic                     | John Adams               | acoustic                     | score 0.9554 | run 7331b2f4
+  3. Paasa                                  | Kurei                    | acoustic                     | score 0.9553 | run 7331b2f4
+  4. Whole Again - Acoustic Version         | Tobey Rosen              | acoustic;chill               | score 0.9521 | run 7331b2f4
+  5. Shame                                  | Ciaran Lavery            | acoustic;british             | score 0.9506 | run 7331b2f4
+ [HTTP 200, 0.016180 s]
+== 4. unknown track: expect HTTP 400
+
+$ curl -s http://127.0.0.1:5055/invocations -H 'Content-Type: application/json' -d '{"dataframe_records": [{"track_id": "not-a-track"}]}'
+  {"error_code": "INVALID_PARAMETER_VALUE", "message": "Failed to predict data '      track_id\n0  not-a-track'. \nError: Unknown seed track_id: not-a-track", "sqlstate": "KAM00", "error_class": "INVALID_PARAMETER_VALUE"}
+ [HTTP 400, 0.009398 s]
+== 5. empty query: expect HTTP 400
+
+$ curl -s http://127.0.0.1:5055/invocations -H 'Content-Type: application/json' -d '{"dataframe_records": [{"track_id": null}]}'
+  {"error_code": "INVALID_PARAMETER_VALUE", "message": "Failed to predict data '  track_id\n0     None'. \nError: Query rows [0] have no track_id and no slider value this model uses", "sqlstate": "KAM00", "error_class": "INVALID_PARAMETER_VALUE"}
+ [HTTP 400, 0.007460 s]
+== 6. wrong type (text in a slider): expect HTTP 400 from schema enforcement
+
+$ curl -s http://127.0.0.1:5055/invocations -H 'Content-Type: application/json' -d '{"dataframe_records": [{"energy": "loud"}]}'
+  {"error_code": "BAD_REQUEST", "message": "Invalid input. Data is not compatible with model signature. Failed to convert column energy to type 'float64'. Error: 'ValueError(\"could not convert string to float: 'loud'\")'", "sqlstate": "KAM00", "error_class": "INVALID_PARAMETER_VALUE"}
+ [HTTP 400, 0.004999 s]

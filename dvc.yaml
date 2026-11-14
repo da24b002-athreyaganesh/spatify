@@ -59,3 +59,73 @@ stages:
     outs:
     - reports/eda:
         cache: false
+  python_env:
+    cmd: python scripts/export_python_env.py
+    deps:
+    - scripts/export_python_env.py
+    - uv.lock
+    outs:
+    - python_env.yaml:
+        cache: false
+  train:
+    cmd: mlflow run . -e train --env-manager=local --experiment-name spatify
+      --run-name train
+    deps:
+    - MLproject
+    - data/features
+    - python_env.yaml
+    - src/spatify/model/data.py
+    - src/spatify/model/plots.py
+    - src/spatify/model/pyfunc.py
+    - src/spatify/model/recommender.py
+    - src/spatify/model/tracking.py
+    - src/spatify/model/train.py
+    params:
+    - features.columns
+    - split
+    - train
+    outs:
+    - models/candidates.json:
+        cache: false
+  evaluate:
+    cmd: mlflow run . -e evaluate --env-manager=local --experiment-name spatify
+      --run-name evaluate
+    deps:
+    - data/features
+    - models/candidates.json
+    - src/spatify/model/data.py
+    - src/spatify/model/evaluate.py
+    - src/spatify/model/plots.py
+    params:
+    - split
+    - evaluate
+    metrics:
+    - metrics/evaluate.json:
+        cache: false
+    plots:
+    - reports/evaluate/variants.csv:
+        cache: false
+        template: bar_horizontal_sorted
+        x: genre_match_at_k
+        y: variant
+        title: Genre match@K per candidate (held-out seed tracks)
+    outs:
+    - reports/evaluate/variants.png:
+        cache: false
+  register:
+    cmd: mlflow run . -e register --env-manager=local --experiment-name spatify
+      --run-name register
+    deps:
+    - data/features
+    - metrics/evaluate.json
+    - models/candidates.json
+    - src/spatify/model/data.py
+    - src/spatify/model/evaluate.py
+    - src/spatify/model/register.py
+    params:
+    - split
+    - evaluate
+    - register
+    metrics:
+    - metrics/register.json:
+        cache: false

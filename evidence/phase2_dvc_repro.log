@@ -1,0 +1,66 @@
+$ dvc repro   (2026-11-14T15:58:11+05:30, fresh MLflow store, SPATIFY_TRIGGER=manual)
+'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+Stage 'make_batches' didn't change, skipping
+'data/incoming.dvc' didn't change, skipping
+Stage 'ingest' didn't change, skipping
+Stage 'validate' didn't change, skipping
+Stage 'features' didn't change, skipping
+Stage 'eda' didn't change, skipping
+Stage 'python_env' didn't change, skipping
+Running stage 'train':
+> mlflow run . -e train --env-manager=local --experiment-name spatify --run-name train
+2026/11/14 15:58:14 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2026/11/14 15:58:14 INFO mlflow.store.db.utils: Updating database tables
+2026/11/14 15:58:14 INFO mlflow.projects: 'spatify' does not exist. Creating a new experiment
+2026/11/14 15:58:14 INFO mlflow.projects.backend.local: === Running command 'python -m spatify.model.train' in run with ID 'ecdd9c5750e04440a765384363c05210' ===
+2026/11/14 15:58:16 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/11/14 15:58:16 INFO mlflow.pyfunc: Validating input example against model signature
+2026/11/14 15:58:17 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-11-14 15:58:17,227 INFO __main__: Logged candidate all-uniform (run 0bbf026d069b4008bcd3ac185a293962)
+2026/11/14 15:58:17 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/11/14 15:58:17 INFO mlflow.pyfunc: Validating input example against model signature
+2026/11/14 15:58:17 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-11-14 15:58:17,743 INFO __main__: Logged candidate all-fisher (run 7331b2f44c3748b4b9464cb2970252ad)
+2026/11/14 15:58:17 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/11/14 15:58:17 INFO mlflow.pyfunc: Validating input example against model signature
+2026/11/14 15:58:17 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-11-14 15:58:18,068 INFO __main__: Logged candidate no_tonal-uniform (run 517745094052485fbe4ad1a8ae90404f)
+2026/11/14 15:58:18 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/11/14 15:58:18 INFO mlflow.pyfunc: Validating input example against model signature
+2026/11/14 15:58:18 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-11-14 15:58:18,441 INFO __main__: Logged candidate no_tonal-fisher (run f3e41b8387734aceb72a1ea72ce54139)
+2026/11/14 15:58:18 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/11/14 15:58:18 INFO mlflow.pyfunc: Validating input example against model signature
+2026/11/14 15:58:18 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-11-14 15:58:18,770 INFO __main__: Logged candidate no_loudness-uniform (run 8083eb6416c648778c248b0720051efd)
+2026/11/14 15:58:19 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/11/14 15:58:19 INFO mlflow.pyfunc: Validating input example against model signature
+2026/11/14 15:58:19 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-11-14 15:58:19,261 INFO __main__: Logged candidate no_loudness-fisher (run 88235f6325bb45e8b51fed9d8b25a507)
+2026-11-14 15:58:19,267 INFO __main__: 6 candidates logged under run ecdd9c5750e04440a765384363c05210
+2026/11/14 15:58:19 INFO mlflow.projects: === Run (ID 'ecdd9c5750e04440a765384363c05210') succeeded ===
+Updating lock file 'dvc.lock'
+Running stage 'evaluate':
+> mlflow run . -e evaluate --env-manager=local --experiment-name spatify --run-name evaluate
+2026/11/14 15:58:21 INFO mlflow.projects.backend.local: === Running command 'python -m spatify.model.evaluate' in run with ID 'cf1cc59997f1497e8243f18803ce7f5f' ===
+2026-11-14 15:58:24,843 INFO __main__: all-uniform: genre match@10 0.1282
+2026-11-14 15:58:25,710 INFO __main__: all-fisher: genre match@10 0.1348
+2026-11-14 15:58:26,463 INFO __main__: no_tonal-uniform: genre match@10 0.1347
+2026-11-14 15:58:27,224 INFO __main__: no_tonal-fisher: genre match@10 0.1319
+2026-11-14 15:58:27,981 INFO __main__: no_loudness-uniform: genre match@10 0.1182
+2026-11-14 15:58:28,748 INFO __main__: no_loudness-fisher: genre match@10 0.1233
+2026-11-14 15:58:29,104 INFO __main__: Best: all-fisher, genre match@10 0.1348 (random tracks: 0.0154)
+2026/11/14 15:58:29 INFO mlflow.projects: === Run (ID 'cf1cc59997f1497e8243f18803ce7f5f') succeeded ===
+Updating lock file 'dvc.lock'
+Running stage 'register':
+> mlflow run . -e register --env-manager=local --experiment-name spatify --run-name register
+2026/11/14 15:58:31 INFO mlflow.projects.backend.local: === Running command 'python -m spatify.model.register' in run with ID 'b56f9ce71e18408a8b122b10c1c27d62' ===
+Successfully registered model 'spatify'.
+Created version '1' of model 'spatify'.
+2026-11-14 15:58:34,820 INFO __main__: Registered spatify version 1 (all-fisher): promoted to champion
+2026/11/14 15:58:35 INFO mlflow.projects: === Run (ID 'b56f9ce71e18408a8b122b10c1c27d62') succeeded ===
+Updating lock file 'dvc.lock'
+Use `dvc push` to send your updates to remote storage.
+real	0m24.065s
+user	2m0.641s
+sys	0m17.441s

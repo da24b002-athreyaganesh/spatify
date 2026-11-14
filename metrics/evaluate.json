@@ -1,0 +1,57 @@
+{
+  "k": 10,
+  "queries": 2000,
+  "random_baseline": 0.0154,
+  "best_variant": "all-fisher",
+  "best": {
+    "genre_match_at_k": 0.1348,
+    "genre_match_at_1": 0.1775,
+    "mean_score_at_k": 0.9583,
+    "coverage_at_k": 0.2595,
+    "ms_per_query": 0.37
+  },
+  "variants": {
+    "all-fisher": {
+      "genre_match_at_k": 0.1348,
+      "genre_match_at_1": 0.1775,
+      "mean_score_at_k": 0.9583,
+      "coverage_at_k": 0.2595,
+      "ms_per_query": 0.37
+    },
+    "no_tonal-uniform": {
+      "genre_match_at_k": 0.1347,
+      "genre_match_at_1": 0.172,
+      "mean_score_at_k": 0.968,
+      "coverage_at_k": 0.2611,
+      "ms_per_query": 0.347
+    },
+    "no_tonal-fisher": {
+      "genre_match_at_k": 0.1319,
+      "genre_match_at_1": 0.181,
+      "mean_score_at_k": 0.9718,
+      "coverage_at_k": 0.2611,
+      "ms_per_query": 0.336
+    },
+    "all-uniform": {
+      "genre_match_at_k": 0.1282,
+      "genre_match_at_1": 0.169,
+      "mean_score_at_k": 0.9471,
+      "coverage_at_k": 0.2616,
+      "ms_per_query": 0.326
+    },
+    "no_loudness-fisher": {
+      "genre_match_at_k": 0.1233,
+      "genre_match_at_1": 0.148,
+      "mean_score_at_k": 0.9654,
+      "coverage_at_k": 0.2606,
+      "ms_per_query": 0.383
+    },
+    "no_loudness-uniform": {
+      "genre_match_at_k": 0.1182,
+      "genre_match_at_1": 0.1505,
+      "mean_score_at_k": 0.9545,
+      "coverage_at_k": 0.262,
+      "ms_per_query": 0.388
+    }
+  }
+}

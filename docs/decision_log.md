@@ -73,3 +73,46 @@ One entry per design decision: what was chosen, why, and what else was considere
 ## D15. Ray stages run with `RAY_ENABLE_UV_RUN_RUNTIME_ENV=0`
 - **Why:** when Ray finds `uv run` anywhere among a driver's parent processes, it builds a fresh environment for its worker processes from the project's base dependencies. That environment lacks the `pipeline` extra, so the workers fail with `No module named 'ray'` and the driver waits forever. `uv run pytest` and `uv run dvc repro` both hit this.
 - **Fix:** turn that feature off; the workers then use the project's `.venv`, which already has every extra. The alternative is to activate `.venv` and run the commands without `uv run`.
+
+## D16. Recommender: exact cosine nearest neighbours over weighted z-scores
+- **Why:** the catalogue is 64,000 tracks with at most 12 features, so one matrix product scores a query exactly in 2–20 ms (`ms_per_query` in `metrics/evaluate.json`, and `evidence/phase2_serving_check.log`). An approximate index (FAISS, Annoy) would add a dependency for no gain at this size. Cosine over z-scores compares a track's profile relative to the average track.
+- **Repeats of a song:** 8,360 tracks share artists and title with another track (2,993 songs released more than once, such as album and single versions). Results skip the seed's own song and any song already listed; otherwise the top result is often the seed again, and genre match would be inflated.
+- **Considered:** scikit-learn `NearestNeighbors`, which gives the same neighbours but no control over skipping repeats.
+
+## D17. Evaluation before feedback exists: genre match@10 on held-out seed tracks
+- **Metric:** the share of the top 10 that shares at least one genre with the seed. With no feedback yet (Phase 5), genre is the available proxy for "sounds alike". Also reported: genre match@1, catalogue coverage (are a few "hub" tracks recommended to everyone?), mean similarity and time per query.
+- **Split:** 10% of tracks are held out by a hash of `track_id`. Their genres are never used to fit a model; they stay in the catalogue, so they can still be recommended. A hash, unlike a random sample, keeps every track on the same side as new batches grow the catalogue.
+- **Measured:** the best candidate reaches 13.5%, against 1.5% for random tracks (about 9 times better). That is low in absolute terms: audio features alone separate genres weakly. The neighbours of "Unholy" (dance, pop), for example, are tagged latin, turkish, chill, kids and electro. That is the cold-start limit the feedback loop in Phase 5 should improve on.
+- **Considered:** leave-one-out over all tracks, which would leak the seed's genre into the Fisher weights.
+
+## D18. Six candidates: three feature sets × two weightings, as nested runs
+- **Feature sets:** all 12 features; `no_tonal` (without mode and key); `no_loudness` (without loudness, which moves with energy, r = 0.76). Dropping one group per run measures that group's importance (the guidelines' "track feature importance").
+- **Weightings:** uniform, or Fisher: each feature weighted by between-genre over within-genre variance, fitted on the training split only.
+- **Measured (genre match@10):** all-fisher 13.48%, no_tonal-uniform 13.47%, no_tonal-fisher 13.19%, all-uniform 12.82%, no_loudness-fisher 12.33%, no_loudness-uniform 11.82%. A difference between two candidates on the same 2,000 seeds has a standard error of about 0.25 points.
+- **Reading:** loudness carries genre information despite its correlation with energy (dropping it costs about 1 point), so the EDA's hint was wrong. Key and mode add noise under uniform weights, and dropping them gains 0.65 points. Fisher weighting finds the same thing by itself: it gives key 0.21–0.25 and mode 0.38, against about 1.3 for speechiness, instrumentalness and acousticness. That is why all-fisher and no_tonal-uniform tie (difference 0.01 points).
+
+## D19. Unset sliders sit at the mean (z = 0), not the median
+- **Why:** the TODO planned the median, and a unit test caught the problem. The median of `mode` is 1 (major), so a query that set only energy and danceability was pulled toward major-key tracks, and a middling jazz track outranked a close dance match. With cosine over z-scores, the mean is the neutral value: an unset feature adds no direction to the query.
+- **Side effect:** tracks with extreme values on unset features score slightly lower, a mild preference for typical values on what the user didn't specify.
+- **Empty queries:** a request with no seed track and no slider the model uses is rejected with HTTP 400.
+
+## D20. Packaging: a custom pyfunc that carries its catalogue, scaler and code (L10)
+- **Inside the model:** `catalogue.parquet`; `model_info.json` with the feature columns, the features stage's scaler (so serving scales a query exactly as training did), the weights, the default K and the training run's ID; and the `spatify` package (`code_paths`).
+- **Signature:** every input optional (`track_id` as a string, sliders as doubles so JSON integers are accepted), K as an inference parameter (default 10). Every answer carries `model_run_id`. A model can't know its registry version when it is logged, so the registry maps run to version.
+- **Requirements:** only mlflow, numpy, pandas and pyarrow, pinned to the installed versions, which come from `uv.lock`. MLflow 3.17 would otherwise copy the whole `uv.lock` into every model (`MLFLOW_UV_AUTO_DETECT`), a second, conflicting environment spec: the project's base packages, without mlflow.
+- **Errors:** an unknown track or an empty query raises an MLflow `INVALID_PARAMETER_VALUE` error, which the server returns as HTTP 400; a wrongly typed input fails schema enforcement, also 400 (`evidence/phase2_serving_check.log`).
+- **Considered:** MLflow's newer "models from code" style; kept the course's `PythonModel` pattern.
+
+## D21. Model stages run as MLflow Projects; data stages don't
+- **How:** DVC runs `mlflow run . -e <stage> --env-manager=local --experiment-name spatify` for train, evaluate and register; the scripts never call `set_experiment()` (the L3 iris gotcha). Each pipeline run leaves a train run (a parent and 6 nested candidates), an evaluate run and a register run, linked by `train_run_id` tags.
+- **Data stages:** ingest, validate and features stay plain Python under DVC, since they log nothing to MLflow. Their metrics are attached to the train run (`data_metrics/`), so a model links to the quality of the data it saw.
+- **Logged beyond autolog:** git commit and whether the tree was dirty, DVC data version, trigger, environment, Fisher weights and their figure, training feature distributions and the drift-reference sample, `params.yaml` and `python_env.yaml`.
+- **Environment:** `python_env.yaml` is generated from `uv.lock` by the `python_env` DVC stage, so it changes only when the lock does. The stages run with `--env-manager=local` inside the uv environment, as the course recommends. The file doesn't install the `spatify` package itself, so another environment manager would also need `pip install -e .`.
+- **Tracking store:** MLflow 3.17's default, `sqlite:///mlflow.db` in the repo root (ignored by Git), with artifacts in `mlruns/`. Phase 3 moves this to the MLflow server in Compose, backed by Postgres.
+
+## D22. Promotion gate and registry aliases (L10, Task A)
+- **Gate:** the best candidate (by `mlflow.search_runs` on genre match@10) is registered as a new version under the `challenger` alias. It's tagged with dataset version, git commit, trigger, variant and training run. The challenger and the champion are then scored on the same 2,000 held-out seeds (only seeds both catalogues contain), and the challenger is promoted if it wins by at least 0.005.
+- **Why 0.005:** the standard error of a difference between two models on the same seeds is about 0.0025, so the bar is two standard errors. A smaller gain could be noise, and swapping models on noise only churns the version that feedback is attributed to.
+- **Aliases:** `champion` is served; `previous` is the rollback target; `challenger` is the latest candidate that wasn't promoted. Stages are deprecated (L3, L10).
+- **Not promoting is not a failure:** the stage exits 0 and the champion keeps serving.
+- **Measured:** the first run registered version 1 and promoted it. Retraining on unchanged data registered version 2 with a gain of 0.0, so it was not promoted (`evidence/phase2_gate_not_promoted.log`). The two runs' metrics are identical apart from timings.

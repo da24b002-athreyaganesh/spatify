@@ -215,3 +215,189 @@ stages:
       md5: 264eb2f53a2223ec57243da504c4bab3.dir
       size: 259360
       nfiles: 5
+  python_env:
+    cmd: python scripts/export_python_env.py
+    deps:
+    - path: scripts/export_python_env.py
+      hash: md5
+      md5: ec6ec48eff612d40f6d752a8c98e2b54
+      size: 1430
+    - path: uv.lock
+      hash: md5
+      md5: 1ae961df27fef8dc91c17aeadb53f6c3
+      size: 983558
+    outs:
+    - path: python_env.yaml
+      hash: md5
+      md5: ccf4245d53748c4e1f7a2c278801e14d
+      size: 3812
+  train:
+    cmd: mlflow run . -e train --env-manager=local --experiment-name spatify
+      --run-name train
+    deps:
+    - path: MLproject
+      hash: md5
+      md5: df3245f4a9a1634aae7dda6595b13609
+      size: 648
+    - path: data/features
+      hash: md5
+      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
+      size: 12260890
+      nfiles: 22
+    - path: python_env.yaml
+      hash: md5
+      md5: ccf4245d53748c4e1f7a2c278801e14d
+      size: 3812
+    - path: src/spatify/model/data.py
+      hash: md5
+      md5: 9f13bfb084894565a0538e412e71734e
+      size: 1815
+    - path: src/spatify/model/plots.py
+      hash: md5
+      md5: 44f8748695376bd7ffa8dd8f17f78a61
+      size: 2809
+    - path: src/spatify/model/pyfunc.py
+      hash: md5
+      md5: ed74ed643651f6ec5f20748c586c5ca1
+      size: 5038
+    - path: src/spatify/model/recommender.py
+      hash: md5
+      md5: 03dd302ba5ecf345fbaef5fc7a72ddeb
+      size: 9026
+    - path: src/spatify/model/tracking.py
+      hash: md5
+      md5: 324675d941c891649a03b5169d7f4239
+      size: 2665
+    - path: src/spatify/model/train.py
+      hash: md5
+      md5: 29da237b2b76862fa4797e2f93bd1ac4
+      size: 7529
+    params:
+      params.yaml:
+        features.columns:
+        - danceability
+        - energy
+        - loudness
+        - speechiness
+        - acousticness
+        - instrumentalness
+        - liveness
+        - valence
+        - tempo
+        - mode
+        - key_sin
+        - key_cos
+        split:
+          seed: 42
+          eval_fraction: 0.1
+        train:
+          k: 10
+          feature_sets:
+            all: []
+            no_tonal:
+            - mode
+            - key_sin
+            - key_cos
+            no_loudness:
+            - loudness
+          weightings:
+          - uniform
+          - fisher
+    outs:
+    - path: models/candidates.json
+      hash: md5
+      md5: 272d0e1ce8be07157d448bfc1890d531
+      size: 1463
+  evaluate:
+    cmd: mlflow run . -e evaluate --env-manager=local --experiment-name spatify
+      --run-name evaluate
+    deps:
+    - path: data/features
+      hash: md5
+      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
+      size: 12260890
+      nfiles: 22
+    - path: models/candidates.json
+      hash: md5
+      md5: 272d0e1ce8be07157d448bfc1890d531
+      size: 1463
+    - path: src/spatify/model/data.py
+      hash: md5
+      md5: 9f13bfb084894565a0538e412e71734e
+      size: 1815
+    - path: src/spatify/model/evaluate.py
+      hash: md5
+      md5: fce0d16a8f2c6c871055734dc39acb0e
+      size: 6650
+    - path: src/spatify/model/plots.py
+      hash: md5
+      md5: 44f8748695376bd7ffa8dd8f17f78a61
+      size: 2809
+    params:
+      params.yaml:
+        evaluate:
+          k: 10
+          queries: 2000
+          seed: 42
+        split:
+          seed: 42
+          eval_fraction: 0.1
+    outs:
+    - path: metrics/evaluate.json
+      hash: md5
+      md5: 41d1a477ccdd67c876eca982ea93ba31
+      size: 1424
+    - path: reports/evaluate/variants.csv
+      hash: md5
+      md5: f343af270747443337adc1c474c0d6ab
+      size: 494
+    - path: reports/evaluate/variants.png
+      hash: md5
+      md5: c1e50f1fae9ea3e108a7dd7fb3515782
+      size: 48777
+  register:
+    cmd: mlflow run . -e register --env-manager=local --experiment-name spatify
+      --run-name register
+    deps:
+    - path: data/features
+      hash: md5
+      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
+      size: 12260890
+      nfiles: 22
+    - path: metrics/evaluate.json
+      hash: md5
+      md5: 41d1a477ccdd67c876eca982ea93ba31
+      size: 1424
+    - path: models/candidates.json
+      hash: md5
+      md5: 272d0e1ce8be07157d448bfc1890d531
+      size: 1463
+    - path: src/spatify/model/data.py
+      hash: md5
+      md5: 9f13bfb084894565a0538e412e71734e
+      size: 1815
+    - path: src/spatify/model/evaluate.py
+      hash: md5
+      md5: fce0d16a8f2c6c871055734dc39acb0e
+      size: 6650
+    - path: src/spatify/model/register.py
+      hash: md5
+      md5: e35526130432bf411c598f712c3354d9
+      size: 7945
+    params:
+      params.yaml:
+        evaluate:
+          k: 10
+          queries: 2000
+          seed: 42
+        register:
+          model_name: spatify
+          min_gain: 0.005
+        split:
+          seed: 42
+          eval_fraction: 0.1
+    outs:
+    - path: metrics/register.json
+      hash: md5
+      md5: 40ea1389b978203b9c69a1cc156bab52
+      size: 265
