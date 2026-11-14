@@ -27,6 +27,8 @@ Needs Docker with Compose, Git LFS and uv.
     uv run python scripts/smoke_test.py      # end-to-end check through the gateway
 
 - The web app (Discover, the operator console, Help): http://localhost:8501
+- New data: drop a batch CSV into `data/incoming/`. Within about 15 s the worker validates it, checks it for drift and retrains if it has drifted; the console's Pipeline and Data drift tabs show the run. A batch that fails validation is moved to `data/quarantine/`.
+- The worker updates `dvc.lock` and `data/incoming.dvc` but doesn't commit; commit them yourself. Don't run `dvc` on the host while the worker is running (DVC locks the repo).
 - Gateway API, with interactive docs: http://localhost:8000/docs
 - MLflow UI (runs, model versions, aliases): http://localhost:5000
 - Admin calls (rollback, pipeline trigger) need the `X-API-Key` header; the key is `SPATIFY_API_KEY` in `.env`.

@@ -1,0 +1,11 @@
+{
+  "reference": "tracks.csv",
+  "reference_rows": 79970,
+  "thresholds": {
+    "psi_moderate": 0.1,
+    "psi_major": 0.2,
+    "min_moderate": 2
+  },
+  "drifted_batches": [],
+  "batches": {}
+}

@@ -101,11 +101,19 @@ def pipeline_tab() -> None:
         table["seconds"] = (pd.to_datetime(table["finished_at"]) - started).dt.total_seconds()
         st.dataframe(
             table[
-                ["id", "trigger", "status", "requested_at", "seconds", "model_version", "promoted"]
+                ["id", "trigger", "status", "requested_at", "seconds", "model_version",
+                 "promoted", "message"]
             ],
             hide_index=True,
             width="stretch",
-        )
+        )  # fmt: skip
+        latest = runs[0]
+        if latest.get("stages"):
+            with st.expander(f"Stages of run {latest['id']} ({latest['status']})"):
+                stages = pd.DataFrame(
+                    [{"stage": n, **s} for n, s in latest["stages"].items()]
+                ).rename(columns={"status": "result"})
+                st.dataframe(stages, hide_index=True, width="stretch")
     else:
         st.info(
             "No pipeline runs recorded yet. Runs started here, or by new data, appear once "
@@ -180,15 +188,65 @@ def drift_tab() -> None:
         return
     if report is None:
         st.info(
-            "Drift monitoring isn't available yet. When it is, this tab compares each audio "
-            "feature of new data with the training data and flags the ones that moved.",
+            "No drift report yet. When a batch of new tracks lands in data/incoming, the "
+            "worker compares each of its audio features with the training data, and the "
+            "results appear here.",
             icon=":material/hourglass_empty:",
         )
     else:
-        features = report.get("features", report)
-        st.dataframe(pd.DataFrame(features), hide_index=True, width="stretch")
+        drift_report(report)
     st.subheader("Retrain", help="Start a pipeline run, e.g. after drift shows up.")
     run_button("Retrain now", "retrain")
+
+
+STATUS_WORDS = {
+    "processed": "checked",
+    "quarantined": "rejected (quarantined)",
+    "failed": "pipeline failed",
+    "removed": "removed",
+    "new": "waiting",
+    "unknown": "checked",
+}
+
+
+def drift_report(report: dict) -> None:
+    """The batches table, then one batch's PSI per feature."""
+    batches = report["batches"]
+    summary = pd.DataFrame(
+        [
+            {
+                "batch": b["name"],
+                "arrived": b["first_seen"],
+                "result": STATUS_WORDS.get(b["status"], b["status"]),
+                "drifted": {True: "yes", False: "no"}.get(b["drifted"], "—"),
+                "largest PSI": max((f["psi"] for f in b["features"]), default=None),
+                "rows": b["rows"],
+                "note": b["message"],
+            }
+            for b in batches
+        ]
+    )
+    st.dataframe(summary, hide_index=True, width="stretch")
+    scored = [b for b in batches if b["features"]]
+    if not scored:
+        return
+    chosen = st.selectbox(
+        "Batch", scored, format_func=lambda b: b["name"], key="drift_batch"
+    )  # newest first, so the latest batch is shown by default
+    if chosen["drifted"]:
+        st.warning(
+            f"{chosen['name']} has drifted from the training data.", icon=":material/warning:"
+        )
+    st.altair_chart(ui.drift_chart(chosen, report["thresholds"]), width="stretch")
+    st.caption(
+        "PSI (Population Stability Index) compares the batch with the training data over ten "
+        "bins: below 0.1 is stable, 0.1 to 0.2 moderate, 0.2 or more a major shift. A batch "
+        "has drifted when any feature is major or two are moderate; drift triggers retraining."
+    )
+    details = pd.DataFrame(chosen["features"]).rename(
+        columns={"ks_stat": "KS statistic", "ks_pvalue": "KS p-value"}
+    )
+    st.dataframe(details, hide_index=True, width="stretch")
 
 
 def tools_tab() -> None:

@@ -65,6 +65,9 @@ class FakeStore:
     def pipeline_counts(self):
         return dict(Counter(r["status"] for r in self.runs))
 
+    def incoming_batches(self):
+        return getattr(self, "seen", [])
+
     def request_pipeline_run(self, trigger):
         row = {
             "id": len(self.runs) + 1,
@@ -303,8 +306,8 @@ def test_metrics_count_requests_by_endpoint(gw):
     assert "_created" not in text  # disable_created_metrics()
 
 
-def test_drift_is_not_available_yet(gw):
-    assert gw.client.get("/drift").status_code == 501
+def test_drift_before_any_batch_is_404(gw):
+    assert gw.client.get("/drift").status_code == 404
 
 
 # --- "Why" labels (D33) ---------------------------------------------------------------
@@ -444,3 +447,40 @@ def test_the_workers_report_overrides_dvc_lock(pipeline_dir):
 def test_pipeline_dag_without_the_mount_is_503(tmp_path):
     with dag_client(tmp_path / "missing") as client:
         assert client.get("/pipeline/dag").status_code == 503
+
+
+# --- Drift (D35) ----------------------------------------------------------------------
+
+
+def test_drift_lists_batches_newest_first_with_their_scores(pipeline_dir):
+    report = {
+        "reference_rows": 79970,
+        "thresholds": {"psi_moderate": 0.1, "psi_major": 0.2, "min_moderate": 2},
+        "batches": {
+            "normal_01.csv": {"rows": 1960, "drifted": False, "features": {
+                "energy": {"psi": 0.01, "ks_stat": 0.02, "ks_pvalue": 0.5, "level": "stable"}}},
+            "shifted_01.csv": {"rows": 1960, "drifted": True, "features": {
+                "energy": {"psi": 0.21, "ks_stat": 0.2, "ks_pvalue": 1e-20, "level": "major"}}},
+        },
+    }  # fmt: skip
+    (pipeline_dir / "metrics/drift.json").write_text(json.dumps(report))
+    store = FakeStore()
+    store.seen = [  # as the worker records them, newest first
+        {"name": "bad_batch.csv", "status": "quarantined", "first_seen": "2026-11-15T10:02:00Z",
+         "drifted": None, "message": "21.6% of rows were invalid"},
+        {"name": "shifted_01.csv", "status": "processed", "first_seen": "2026-11-15T10:01:00Z",
+         "drifted": True, "message": None},
+        {"name": "normal_01.csv", "status": "processed", "first_seen": "2026-11-15T10:00:00Z",
+         "drifted": False, "message": None},
+    ]  # fmt: skip
+    with dag_client(pipeline_dir, store) as client:
+        drift = client.get("/drift").json()
+    assert [b["name"] for b in drift["batches"]] == [
+        "bad_batch.csv",
+        "shifted_01.csv",
+        "normal_01.csv",
+    ]
+    bad, shifted, _ = drift["batches"]
+    assert bad["features"] == [] and "invalid" in bad["message"]  # rejected: nothing to score
+    assert shifted["drifted"] and shifted["features"][0]["level"] == "major"
+    assert drift["reference_rows"] == 79970

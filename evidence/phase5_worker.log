@@ -1,0 +1,666 @@
+worker-1  | 2026-11-14 19:23:18,195 INFO spatify.worker: Watching /repo/data/incoming and the run queue every 15 s
+worker-1  | 2026-11-14 19:23:20,449 INFO spatify.worker.dvc: 'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:23:20,484 INFO spatify.worker.dvc: Stage 'make_batches' didn't change, skipping
+worker-1  | 2026-11-14 19:23:20,487 INFO spatify.worker.dvc: 'data/incoming.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:23:20,500 INFO spatify.worker.dvc: Running stage 'ingest':
+worker-1  | 2026-11-14 19:23:20,501 INFO spatify.worker.dvc: > python -m spatify.pipeline.ingest
+worker-1  | 2026-11-14 19:23:21,824 INFO spatify.worker.dvc: 2026-11-14 19:23:21,824 INFO __main__: Ingesting 2 files: tracks.csv, normal_01.csv
+worker-1  | 2026-11-14 19:23:25,290 INFO spatify.worker.dvc: 2026-11-14 19:23:25,290	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:23:27,109 INFO spatify.worker.dvc: 2026-11-14 19:23:27,109	WARNING file_datasink.py:114 -- [SaveMode=SaveMode.OVERWRITE] Replacing contents /repo/data/ingested
+worker-1  | 2026-11-14 19:23:27,567 INFO spatify.worker.dvc: 2026-11-14 19:23:27,567 INFO __main__: Ingested 81970 rows in 2.4 s (34522 rows/s)
+worker-1  | 2026-11-14 19:23:29,866 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:23:29,886 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:23:29,927 INFO spatify.worker.dvc: Running stage 'validate':
+worker-1  | 2026-11-14 19:23:29,927 INFO spatify.worker.dvc: > python -m spatify.pipeline.validate
+worker-1  | 2026-11-14 19:23:34,508 INFO spatify.worker.dvc: 2026-11-14 19:23:34,507	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:23:38,877 INFO spatify.worker.dvc: 2026-11-14 19:23:38,877 INFO __main__: 81970 rows: 81930 valid, 40 rejected (0.05%) in 4.5 s (18332 rows/s)
+worker-1  | 2026-11-14 19:23:40,820 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:23:40,842 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:23:40,880 INFO spatify.worker.dvc: Running stage 'drift_check':
+worker-1  | 2026-11-14 19:23:40,880 INFO spatify.worker.dvc: > python -m spatify.pipeline.drift
+worker-1  | 2026-11-14 19:23:42,791 INFO spatify.worker.dvc: 2026-11-14 19:23:42,790 INFO __main__: normal_01.csv: no drift (largest PSI 0.013, acousticness)
+worker-1  | 2026-11-14 19:23:43,074 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:23:43,160 INFO spatify.worker.dvc: Use `dvc push` to send your updates to remote storage.
+worker-1  | 2026-11-14 19:23:43,353 INFO spatify.worker: Run 239 (new_data) succeeded in 25 s. Checked normal_01.csv: no drift, so the model wasn't retrained.
+worker-1  | 2026-11-14 19:31:31,581 INFO spatify.worker.dvc: 'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:31:31,591 INFO spatify.worker.dvc: Stage 'make_batches' didn't change, skipping
+worker-1  | 2026-11-14 19:31:31,593 INFO spatify.worker.dvc: 'data/incoming.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:31:31,604 INFO spatify.worker.dvc: Running stage 'ingest':
+worker-1  | 2026-11-14 19:31:31,604 INFO spatify.worker.dvc: > python -m spatify.pipeline.ingest
+worker-1  | 2026-11-14 19:31:32,723 INFO spatify.worker.dvc: 2026-11-14 19:31:32,723 INFO __main__: Ingesting 3 files: tracks.csv, normal_01.csv, shifted_01.csv
+worker-1  | 2026-11-14 19:31:36,159 INFO spatify.worker.dvc: 2026-11-14 19:31:36,159	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:31:38,153 INFO spatify.worker.dvc: 2026-11-14 19:31:38,153	WARNING file_datasink.py:114 -- [SaveMode=SaveMode.OVERWRITE] Replacing contents /repo/data/ingested
+worker-1  | 2026-11-14 19:31:38,624 INFO spatify.worker.dvc: 2026-11-14 19:31:38,624 INFO __main__: Ingested 83970 rows in 2.6 s (32800 rows/s)
+worker-1  | 2026-11-14 19:31:40,564 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:31:40,587 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:31:40,653 INFO spatify.worker.dvc: Running stage 'validate':
+worker-1  | 2026-11-14 19:31:40,653 INFO spatify.worker.dvc: > python -m spatify.pipeline.validate
+worker-1  | 2026-11-14 19:31:46,492 INFO spatify.worker.dvc: 2026-11-14 19:31:46,491	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:31:50,727 INFO spatify.worker.dvc: 2026-11-14 19:31:50,727 INFO __main__: 83970 rows: 83890 valid, 80 rejected (0.10%) in 4.3 s (19380 rows/s)
+worker-1  | 2026-11-14 19:31:52,914 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:31:52,936 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:31:52,976 INFO spatify.worker.dvc: Running stage 'drift_check':
+worker-1  | 2026-11-14 19:31:52,977 INFO spatify.worker.dvc: > python -m spatify.pipeline.drift
+worker-1  | 2026-11-14 19:31:55,037 INFO spatify.worker.dvc: 2026-11-14 19:31:55,037 INFO __main__: normal_01.csv: no drift (largest PSI 0.013, acousticness)
+worker-1  | 2026-11-14 19:31:55,037 INFO spatify.worker.dvc: 2026-11-14 19:31:55,037 INFO __main__: shifted_01.csv: DRIFTED (largest PSI 0.227, energy)
+worker-1  | 2026-11-14 19:31:55,317 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:31:55,398 INFO spatify.worker.dvc: Use `dvc push` to send your updates to remote storage.
+worker-1  | 2026-11-14 19:31:56,853 INFO spatify.worker.dvc: 'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:31:56,866 INFO spatify.worker.dvc: Stage 'make_batches' didn't change, skipping
+worker-1  | 2026-11-14 19:31:56,868 INFO spatify.worker.dvc: 'data/incoming.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:31:56,874 INFO spatify.worker.dvc: Stage 'ingest' didn't change, skipping
+worker-1  | 2026-11-14 19:31:56,887 INFO spatify.worker.dvc: Stage 'validate' didn't change, skipping
+worker-1  | 2026-11-14 19:31:56,930 INFO spatify.worker.dvc: Running stage 'features':
+worker-1  | 2026-11-14 19:31:56,930 INFO spatify.worker.dvc: > python -m spatify.pipeline.features
+worker-1  | 2026-11-14 19:32:02,794 INFO spatify.worker.dvc: 2026-11-14 19:32:02,794	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:32:09,146 INFO spatify.worker.dvc: 2026-11-14 19:32:09,146 INFO __main__: 83890 rows -> 67718 tracks (10842 in several genres) in 6.5 s (12980 rows/s)
+worker-1  | 2026-11-14 19:32:11,448 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:32:11,469 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:11,480 INFO spatify.worker.dvc: Stage 'drift_check' didn't change, skipping
+worker-1  | 2026-11-14 19:32:11,486 INFO spatify.worker.dvc: Stage 'eda' didn't change, skipping
+worker-1  | 2026-11-14 19:32:11,496 INFO spatify.worker.dvc: Running stage 'python_env':
+worker-1  | 2026-11-14 19:32:11,496 INFO spatify.worker.dvc: > python scripts/export_python_env.py
+worker-1  | 2026-11-14 19:32:11,678 INFO spatify.worker.dvc: Wrote python_env.yaml with 177 pinned packages
+worker-1  | 2026-11-14 19:32:11,731 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:32:11,755 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:11,807 INFO spatify.worker.dvc: Running stage 'train':
+worker-1  | 2026-11-14 19:32:11,808 INFO spatify.worker.dvc: > mlflow run . -e train --env-manager=local --experiment-name spatify --run-name train
+worker-1  | 2026-11-14 19:32:15,200 INFO spatify.worker.dvc: 2026/11/14 19:32:15 INFO mlflow.projects.utils: === Created directory /tmp/tmpb2fx0fzp for downloading remote URIs passed to arguments of type 'path' ===
+worker-1  | 2026-11-14 19:32:15,200 INFO spatify.worker.dvc: 2026/11/14 19:32:15 INFO mlflow.projects.backend.local: === Running command 'python -m spatify.model.train' in run with ID '7e806f8be39941a9a108bb2056fd1bd6' ===
+worker-1  | 2026-11-14 19:32:18,164 INFO spatify.worker.dvc: 2026/11/14 19:32:18 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+worker-1  | 2026-11-14 19:32:18,167 INFO spatify.worker.dvc: 2026/11/14 19:32:18 INFO mlflow.pyfunc: Validating input example against model signature
+worker-1  | 2026-11-14 19:32:18,178 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:18,179 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:18,179 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 6026.30it/s]
+worker-1  | 2026-11-14 19:32:18,179 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 3672.77it/s]
+worker-1  | 2026-11-14 19:32:18,180 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:18,181 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:18,181 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1475.83it/s]
+worker-1  | 2026-11-14 19:32:18,181 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1310.72it/s]
+worker-1  | 2026-11-14 19:32:18,640 INFO spatify.worker.dvc: 2026/11/14 19:32:18 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+worker-1  | 2026-11-14 19:32:19,145 INFO spatify.worker.dvc: 🏃 View run all-uniform at: http://mlflow:5000/#/experiments/1/runs/ee7efc8973864df6ae24a5540e3bf4c5
+worker-1  | 2026-11-14 19:32:19,145 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:19,154 INFO spatify.worker.dvc: 2026-11-14 19:32:19,153 INFO __main__: Logged candidate all-uniform (run ee7efc8973864df6ae24a5540e3bf4c5)
+worker-1  | 2026-11-14 19:32:19,678 INFO spatify.worker.dvc: 2026/11/14 19:32:19 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+worker-1  | 2026-11-14 19:32:19,680 INFO spatify.worker.dvc: 2026/11/14 19:32:19 INFO mlflow.pyfunc: Validating input example against model signature
+worker-1  | 2026-11-14 19:32:19,682 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:19,685 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:19,685 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 330.52it/s]
+worker-1  | 2026-11-14 19:32:19,685 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 308.27it/s]
+worker-1  | 2026-11-14 19:32:19,687 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:19,688 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:19,688 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1356.06it/s]
+worker-1  | 2026-11-14 19:32:19,688 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1044.66it/s]
+worker-1  | 2026-11-14 19:32:19,703 INFO spatify.worker.dvc: 2026/11/14 19:32:19 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+worker-1  | 2026-11-14 19:32:20,075 INFO spatify.worker.dvc: 🏃 View run all-fisher at: http://mlflow:5000/#/experiments/1/runs/6d4f9ec131c54d62a14e18491a8b5b9e
+worker-1  | 2026-11-14 19:32:20,075 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:20,086 INFO spatify.worker.dvc: 2026-11-14 19:32:20,086 INFO __main__: Logged candidate all-fisher (run 6d4f9ec131c54d62a14e18491a8b5b9e)
+worker-1  | 2026-11-14 19:32:20,362 INFO spatify.worker.dvc: 2026/11/14 19:32:20 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+worker-1  | 2026-11-14 19:32:20,364 INFO spatify.worker.dvc: 2026/11/14 19:32:20 INFO mlflow.pyfunc: Validating input example against model signature
+worker-1  | 2026-11-14 19:32:20,366 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:20,369 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:20,369 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 319.88it/s]
+worker-1  | 2026-11-14 19:32:20,369 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 308.61it/s]
+worker-1  | 2026-11-14 19:32:20,370 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:20,371 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:20,371 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 2160.90it/s]
+worker-1  | 2026-11-14 19:32:20,371 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1791.67it/s]
+worker-1  | 2026-11-14 19:32:20,383 INFO spatify.worker.dvc: 2026/11/14 19:32:20 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+worker-1  | 2026-11-14 19:32:20,867 INFO spatify.worker.dvc: 🏃 View run no_tonal-uniform at: http://mlflow:5000/#/experiments/1/runs/13db01b33c724096ba78befff483949c
+worker-1  | 2026-11-14 19:32:20,867 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:20,884 INFO spatify.worker.dvc: 2026-11-14 19:32:20,884 INFO __main__: Logged candidate no_tonal-uniform (run 13db01b33c724096ba78befff483949c)
+worker-1  | 2026-11-14 19:32:21,407 INFO spatify.worker.dvc: 2026/11/14 19:32:21 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+worker-1  | 2026-11-14 19:32:21,410 INFO spatify.worker.dvc: 2026/11/14 19:32:21 INFO mlflow.pyfunc: Validating input example against model signature
+worker-1  | 2026-11-14 19:32:21,412 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:21,416 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:21,416 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 237.36it/s]
+worker-1  | 2026-11-14 19:32:21,416 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 227.91it/s]
+worker-1  | 2026-11-14 19:32:21,417 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:21,418 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:21,418 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1588.15it/s]
+worker-1  | 2026-11-14 19:32:21,418 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1289.36it/s]
+worker-1  | 2026-11-14 19:32:21,432 INFO spatify.worker.dvc: 2026/11/14 19:32:21 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+worker-1  | 2026-11-14 19:32:21,841 INFO spatify.worker.dvc: 🏃 View run no_tonal-fisher at: http://mlflow:5000/#/experiments/1/runs/7208858fb01e45cdab4af7025bed4db6
+worker-1  | 2026-11-14 19:32:21,841 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:21,849 INFO spatify.worker.dvc: 2026-11-14 19:32:21,849 INFO __main__: Logged candidate no_tonal-fisher (run 7208858fb01e45cdab4af7025bed4db6)
+worker-1  | 2026-11-14 19:32:22,105 INFO spatify.worker.dvc: 2026/11/14 19:32:22 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+worker-1  | 2026-11-14 19:32:22,107 INFO spatify.worker.dvc: 2026/11/14 19:32:22 INFO mlflow.pyfunc: Validating input example against model signature
+worker-1  | 2026-11-14 19:32:22,108 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:22,111 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:22,111 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 387.68it/s]
+worker-1  | 2026-11-14 19:32:22,111 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 373.39it/s]
+worker-1  | 2026-11-14 19:32:22,112 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:22,113 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:22,113 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1850.16it/s]
+worker-1  | 2026-11-14 19:32:22,113 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1571.49it/s]
+worker-1  | 2026-11-14 19:32:22,124 INFO spatify.worker.dvc: 2026/11/14 19:32:22 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+worker-1  | 2026-11-14 19:32:22,593 INFO spatify.worker.dvc: 🏃 View run no_loudness-uniform at: http://mlflow:5000/#/experiments/1/runs/bc9e3218a5a642e28bc095ce5dc7717a
+worker-1  | 2026-11-14 19:32:22,594 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:22,603 INFO spatify.worker.dvc: 2026-11-14 19:32:22,603 INFO __main__: Logged candidate no_loudness-uniform (run bc9e3218a5a642e28bc095ce5dc7717a)
+worker-1  | 2026-11-14 19:32:23,093 INFO spatify.worker.dvc: 2026/11/14 19:32:23 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+worker-1  | 2026-11-14 19:32:23,096 INFO spatify.worker.dvc: 2026/11/14 19:32:23 INFO mlflow.pyfunc: Validating input example against model signature
+worker-1  | 2026-11-14 19:32:23,098 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:23,101 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:23,101 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 436.18it/s]
+worker-1  | 2026-11-14 19:32:23,101 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 413.48it/s]
+worker-1  | 2026-11-14 19:32:23,102 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:23,102 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:23,102 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1842.03it/s]
+worker-1  | 2026-11-14 19:32:23,102 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1552.87it/s]
+worker-1  | 2026-11-14 19:32:23,120 INFO spatify.worker.dvc: 2026/11/14 19:32:23 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+worker-1  | 2026-11-14 19:32:23,618 INFO spatify.worker.dvc: 🏃 View run no_loudness-fisher at: http://mlflow:5000/#/experiments/1/runs/6e182e331b2e47a3aef7cc3103613e76
+worker-1  | 2026-11-14 19:32:23,618 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:23,628 INFO spatify.worker.dvc: 2026-11-14 19:32:23,628 INFO __main__: Logged candidate no_loudness-fisher (run 6e182e331b2e47a3aef7cc3103613e76)
+worker-1  | 2026-11-14 19:32:23,642 INFO spatify.worker.dvc: 🏃 View run train at: http://mlflow:5000/#/experiments/1/runs/7e806f8be39941a9a108bb2056fd1bd6
+worker-1  | 2026-11-14 19:32:23,642 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:23,650 INFO spatify.worker.dvc: 2026-11-14 19:32:23,650 INFO __main__: 6 candidates logged under run 7e806f8be39941a9a108bb2056fd1bd6
+worker-1  | 2026-11-14 19:32:24,036 INFO spatify.worker.dvc: 2026/11/14 19:32:24 INFO mlflow.projects: === Run (ID '7e806f8be39941a9a108bb2056fd1bd6') succeeded ===
+worker-1  | 2026-11-14 19:32:24,065 INFO spatify.worker.dvc: 🏃 View run train at: http://mlflow:5000/#/experiments/1/runs/7e806f8be39941a9a108bb2056fd1bd6
+worker-1  | 2026-11-14 19:32:24,065 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:24,654 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:32:24,683 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:24,737 INFO spatify.worker.dvc: Running stage 'evaluate':
+worker-1  | 2026-11-14 19:32:24,737 INFO spatify.worker.dvc: > mlflow run . -e evaluate --env-manager=local --experiment-name spatify --run-name evaluate
+worker-1  | 2026-11-14 19:32:27,698 INFO spatify.worker.dvc: 2026/11/14 19:32:27 INFO mlflow.projects.utils: === Created directory /tmp/tmp3m16frss for downloading remote URIs passed to arguments of type 'path' ===
+worker-1  | 2026-11-14 19:32:27,698 INFO spatify.worker.dvc: 2026/11/14 19:32:27 INFO mlflow.projects.backend.local: === Running command 'python -m spatify.model.evaluate' in run with ID 'f71522fcbe36452d9a4e4d9821437167' ===
+worker-1  | 2026-11-14 19:32:30,449 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 4514.86it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 5020.11it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 6049.48it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 6993.42it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 7775.87it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 8476.20it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 9137.92it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 9535.22it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 10093.24it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 10572.99it/s]
+worker-1  | 2026-11-14 19:32:30,450 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 11000.80it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 11328.30it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 11670.79it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 11988.62it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 11401.70it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 10874.88it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 10902.63it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 11061.90it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 11257.49it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 11413.07it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 11498.74it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 11617.11it/s]
+worker-1  | 2026-11-14 19:32:30,451 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 11740.17it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 11879.08it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 12029.09it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 12149.28it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 12207.20it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 12294.86it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 12373.84it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 12480.57it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 12628.54it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 12743.80it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 12850.43it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 12999.67it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 13109.54it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 13210.41it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 13297.00it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 13410.48it/s]
+worker-1  | 2026-11-14 19:32:30,452 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 13490.96it/s]
+worker-1  | 2026-11-14 19:32:30,453 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 13565.02it/s]
+worker-1  | 2026-11-14 19:32:30,453 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 13648.13it/s]
+worker-1  | 2026-11-14 19:32:30,453 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 13742.16it/s]
+worker-1  | 2026-11-14 19:32:30,453 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 13823.49it/s]
+worker-1  | 2026-11-14 19:32:30,474 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 13900.98it/s]
+worker-1  | 2026-11-14 19:32:30,474 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 1862.63it/s]
+worker-1  | 2026-11-14 19:32:30,489 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 1866.34it/s]
+worker-1  | 2026-11-14 19:32:30,490 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 1190.41it/s]
+worker-1  | 2026-11-14 19:32:30,494 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 1199.71it/s]
+worker-1  | 2026-11-14 19:32:30,508 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 1111.05it/s]
+worker-1  | 2026-11-14 19:32:30,513 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 853.03it/s]
+worker-1  | 2026-11-14 19:32:30,514 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 806.75it/s]
+worker-1  | 2026-11-14 19:32:30,515 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 806.60it/s]
+worker-1  | 2026-11-14 19:32:30,516 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 813.66it/s]
+worker-1  | 2026-11-14 19:32:30,516 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 812.77it/s]
+worker-1  | 2026-11-14 19:32:30,516 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 826.83it/s]
+worker-1  | 2026-11-14 19:32:30,516 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 837.60it/s]
+worker-1  | 2026-11-14 19:32:30,516 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 836.19it/s]
+worker-1  | 2026-11-14 19:32:31,799 INFO spatify.worker.dvc: 2026-11-14 19:32:31,798 INFO __main__: all-uniform: genre match@10 0.1255
+worker-1  | 2026-11-14 19:32:32,085 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:32,085 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 10894.30it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 13148.29it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 15709.00it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 17905.25it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 19897.08it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 21527.65it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 22955.53it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 24053.36it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 25132.31it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 26083.98it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 26855.26it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 27548.79it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 28149.69it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 28728.11it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 29276.20it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 29720.49it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 30200.41it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 30578.16it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 30924.24it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 31289.10it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 31604.01it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 31884.83it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 32156.33it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 32409.30it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 32676.10it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 32896.50it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 33132.30it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 33354.31it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 33535.93it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 33572.34it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 33763.55it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 33936.21it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 34108.44it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 34280.37it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 34435.99it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 34521.02it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 34632.73it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 34769.54it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 34907.78it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 35003.58it/s]
+worker-1  | 2026-11-14 19:32:32,086 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 35102.36it/s]
+worker-1  | 2026-11-14 19:32:32,087 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 35203.99it/s]
+worker-1  | 2026-11-14 19:32:32,087 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 35287.63it/s]
+worker-1  | 2026-11-14 19:32:32,090 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 35333.98it/s]
+worker-1  | 2026-11-14 19:32:32,095 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 9009.24it/s]
+worker-1  | 2026-11-14 19:32:32,097 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 4543.35it/s]
+worker-1  | 2026-11-14 19:32:32,121 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 3991.99it/s]
+worker-1  | 2026-11-14 19:32:32,131 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 1340.43it/s]
+worker-1  | 2026-11-14 19:32:32,134 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 1070.57it/s]
+worker-1  | 2026-11-14 19:32:32,134 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 1037.97it/s]
+worker-1  | 2026-11-14 19:32:32,135 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 1056.17it/s]
+worker-1  | 2026-11-14 19:32:32,137 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 1049.67it/s]
+worker-1  | 2026-11-14 19:32:32,137 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 1031.09it/s]
+worker-1  | 2026-11-14 19:32:32,137 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 1042.52it/s]
+worker-1  | 2026-11-14 19:32:32,138 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 1058.17it/s]
+worker-1  | 2026-11-14 19:32:32,138 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 1067.16it/s]
+worker-1  | 2026-11-14 19:32:32,138 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 1064.23it/s]
+worker-1  | 2026-11-14 19:32:33,448 INFO spatify.worker.dvc: 2026-11-14 19:32:33,448 INFO __main__: all-fisher: genre match@10 0.1350
+worker-1  | 2026-11-14 19:32:33,795 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:33,795 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:33,795 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 9532.51it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 11491.24it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 13647.41it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 15477.14it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 16926.17it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 18342.44it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 19547.36it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 20522.59it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 21399.51it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 22180.35it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 22908.31it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 23618.79it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 24190.75it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 24734.73it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 25256.75it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 25712.21it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 26147.11it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 26527.57it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 26859.38it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 27218.07it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 27525.12it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 27827.11it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 28092.31it/s]
+worker-1  | 2026-11-14 19:32:33,796 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 28339.89it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 28571.55it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 28781.18it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 28823.16it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 29033.50it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 29204.04it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 29385.60it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 29557.50it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 29727.07it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 29881.70it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 30041.36it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 30156.25it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 30259.51it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 30351.90it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 30451.58it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 30546.75it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 30654.51it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 30752.23it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 30856.68it/s]
+worker-1  | 2026-11-14 19:32:33,797 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 30962.24it/s]
+worker-1  | 2026-11-14 19:32:33,819 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 31063.69it/s]
+worker-1  | 2026-11-14 19:32:33,826 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 1913.19it/s]
+worker-1  | 2026-11-14 19:32:33,835 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 1484.26it/s]
+worker-1  | 2026-11-14 19:32:33,836 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 1191.03it/s]
+worker-1  | 2026-11-14 19:32:33,841 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 1168.97it/s]
+worker-1  | 2026-11-14 19:32:33,842 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 1075.19it/s]
+worker-1  | 2026-11-14 19:32:33,845 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 1083.65it/s]
+worker-1  | 2026-11-14 19:32:33,847 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 1030.07it/s]
+worker-1  | 2026-11-14 19:32:33,855 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 1000.94it/s]
+worker-1  | 2026-11-14 19:32:33,857 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 892.24it/s]
+worker-1  | 2026-11-14 19:32:33,859 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 875.89it/s]
+worker-1  | 2026-11-14 19:32:33,860 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 858.80it/s]
+worker-1  | 2026-11-14 19:32:33,860 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 872.47it/s]
+worker-1  | 2026-11-14 19:32:33,860 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 870.67it/s]
+worker-1  | 2026-11-14 19:32:35,160 INFO spatify.worker.dvc: 2026-11-14 19:32:35,160 INFO __main__: no_tonal-uniform: genre match@10 0.1356
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 10058.28it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 11865.07it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 14122.24it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 15665.00it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 17346.17it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 18780.47it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 19972.88it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 20932.27it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 21807.47it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 22623.00it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 23254.71it/s]
+worker-1  | 2026-11-14 19:32:35,471 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 23797.47it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 24331.08it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 24870.93it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 25297.37it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 25741.80it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 26099.26it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 26443.95it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 26751.18it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 27033.86it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 27303.28it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 27552.91it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 27752.87it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 27969.80it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 28164.81it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 28354.63it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 28532.68it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 28693.02it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 28802.94it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 28932.89it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 29068.51it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 29196.81it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 29343.23it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 29476.30it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 29579.01it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 29694.19it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 29712.66it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 29835.93it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 29910.01it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 30029.02it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 30121.99it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 30195.54it/s]
+worker-1  | 2026-11-14 19:32:35,472 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 30200.11it/s]
+worker-1  | 2026-11-14 19:32:35,502 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 30209.42it/s]
+worker-1  | 2026-11-14 19:32:35,506 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 1471.64it/s]
+worker-1  | 2026-11-14 19:32:35,506 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 1309.75it/s]
+worker-1  | 2026-11-14 19:32:35,508 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 1336.06it/s]
+worker-1  | 2026-11-14 19:32:35,509 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 1312.17it/s]
+worker-1  | 2026-11-14 19:32:35,510 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 1275.74it/s]
+worker-1  | 2026-11-14 19:32:35,511 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 1268.51it/s]
+worker-1  | 2026-11-14 19:32:35,517 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 1286.85it/s]
+worker-1  | 2026-11-14 19:32:35,525 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 1126.39it/s]
+worker-1  | 2026-11-14 19:32:35,532 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 976.48it/s]
+worker-1  | 2026-11-14 19:32:35,533 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 890.65it/s]
+worker-1  | 2026-11-14 19:32:35,533 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 888.36it/s]
+worker-1  | 2026-11-14 19:32:35,533 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 903.01it/s]
+worker-1  | 2026-11-14 19:32:35,533 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 901.40it/s]
+worker-1  | 2026-11-14 19:32:36,666 INFO spatify.worker.dvc: 2026-11-14 19:32:36,666 INFO __main__: no_tonal-fisher: genre match@10 0.1356
+worker-1  | 2026-11-14 19:32:36,999 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 8322.03it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 9857.35it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 11803.86it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 13443.28it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 14831.34it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 16049.63it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 17059.92it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 17867.11it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 18678.25it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 19319.69it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 19818.45it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 20270.50it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 20638.13it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 20986.51it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 21290.88it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 21392.69it/s]
+worker-1  | 2026-11-14 19:32:37,000 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 21177.06it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 21171.47it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 16734.94it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 15670.85it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 15548.17it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 15658.36it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 15858.79it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 16047.07it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 16289.82it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 16538.05it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 16782.19it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 17012.97it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 17226.29it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 17442.35it/s]
+worker-1  | 2026-11-14 19:32:37,001 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 17649.44it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 17690.49it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 17857.31it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 18028.61it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 18193.16it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 18362.51it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 18530.06it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 18689.44it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 18847.55it/s]
+worker-1  | 2026-11-14 19:32:37,002 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 18985.19it/s]
+worker-1  | 2026-11-14 19:32:37,007 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 19135.02it/s]
+worker-1  | 2026-11-14 19:32:37,022 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 5344.03it/s]
+worker-1  | 2026-11-14 19:32:37,023 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 1921.41it/s]
+worker-1  | 2026-11-14 19:32:37,025 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 1885.89it/s]
+worker-1  | 2026-11-14 19:32:37,056 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 1791.88it/s]
+worker-1  | 2026-11-14 19:32:37,061 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 816.50it/s]
+worker-1  | 2026-11-14 19:32:37,062 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 760.62it/s]
+worker-1  | 2026-11-14 19:32:37,063 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 772.74it/s]
+worker-1  | 2026-11-14 19:32:37,068 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 765.44it/s]
+worker-1  | 2026-11-14 19:32:37,071 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 725.82it/s]
+worker-1  | 2026-11-14 19:32:37,071 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 710.21it/s]
+worker-1  | 2026-11-14 19:32:37,072 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 722.39it/s]
+worker-1  | 2026-11-14 19:32:37,072 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 731.69it/s]
+worker-1  | 2026-11-14 19:32:37,072 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 743.98it/s]
+worker-1  | 2026-11-14 19:32:37,072 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 755.02it/s]
+worker-1  | 2026-11-14 19:32:37,073 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 766.99it/s]
+worker-1  | 2026-11-14 19:32:37,073 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 765.69it/s]
+worker-1  | 2026-11-14 19:32:38,409 INFO spatify.worker.dvc: 2026-11-14 19:32:38,409 INFO __main__: no_loudness-uniform: genre match@10 0.1176
+worker-1  | 2026-11-14 19:32:38,685 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 9915.61it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 12018.06it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 14396.92it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 16448.25it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 18204.44it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 19691.57it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 20808.03it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 21760.33it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 22658.30it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 23379.62it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 23942.58it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 24552.02it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 25046.37it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 25475.17it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 25944.15it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 26389.64it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 26795.63it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 27147.60it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 27489.40it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 27813.69it/s]
+worker-1  | 2026-11-14 19:32:38,686 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 27882.36it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 28123.95it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 28381.58it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 28573.18it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 28767.52it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 28995.45it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 29209.75it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 29404.23it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 29594.85it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 29767.95it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 29904.19it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 30066.70it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 30148.56it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 30226.01it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 30349.52it/s]
+worker-1  | 2026-11-14 19:32:38,687 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 30460.95it/s]
+worker-1  | 2026-11-14 19:32:38,693 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 30585.19it/s]
+worker-1  | 2026-11-14 19:32:38,700 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 4959.19it/s]
+worker-1  | 2026-11-14 19:32:38,705 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 2780.75it/s]
+worker-1  | 2026-11-14 19:32:38,711 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 2098.10it/s]
+worker-1  | 2026-11-14 19:32:38,715 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 1586.57it/s]
+worker-1  | 2026-11-14 19:32:38,721 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 1419.37it/s]
+worker-1  | 2026-11-14 19:32:38,723 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 1228.73it/s]
+worker-1  | 2026-11-14 19:32:38,728 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 1171.49it/s]
+worker-1  | 2026-11-14 19:32:38,728 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 1071.90it/s]
+worker-1  | 2026-11-14 19:32:38,735 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 1078.37it/s]
+worker-1  | 2026-11-14 19:32:38,736 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 947.81it/s]
+worker-1  | 2026-11-14 19:32:38,739 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 957.19it/s]
+worker-1  | 2026-11-14 19:32:38,746 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 908.02it/s]
+worker-1  | 2026-11-14 19:32:38,754 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 827.85it/s]
+worker-1  | 2026-11-14 19:32:38,760 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 745.56it/s]
+worker-1  | 2026-11-14 19:32:38,761 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 702.40it/s]
+worker-1  | 2026-11-14 19:32:38,762 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 700.36it/s]
+worker-1  | 2026-11-14 19:32:38,762 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 710.26it/s]
+worker-1  | 2026-11-14 19:32:38,763 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 717.00it/s]
+worker-1  | 2026-11-14 19:32:38,763 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 725.52it/s]
+worker-1  | 2026-11-14 19:32:38,763 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 724.40it/s]
+worker-1  | 2026-11-14 19:32:39,918 INFO spatify.worker.dvc: 2026-11-14 19:32:39,918 INFO __main__: no_loudness-fisher: genre match@10 0.1221
+worker-1  | 2026-11-14 19:32:40,445 INFO spatify.worker.dvc: 🏃 View run evaluate at: http://mlflow:5000/#/experiments/1/runs/f71522fcbe36452d9a4e4d9821437167
+worker-1  | 2026-11-14 19:32:40,446 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:40,460 INFO spatify.worker.dvc: 2026-11-14 19:32:40,460 INFO __main__: Best: no_tonal-uniform, genre match@10 0.1356 (random tracks: 0.0133)
+worker-1  | 2026-11-14 19:32:40,867 INFO spatify.worker.dvc: 2026/11/14 19:32:40 INFO mlflow.projects: === Run (ID 'f71522fcbe36452d9a4e4d9821437167') succeeded ===
+worker-1  | 2026-11-14 19:32:40,908 INFO spatify.worker.dvc: 🏃 View run evaluate at: http://mlflow:5000/#/experiments/1/runs/f71522fcbe36452d9a4e4d9821437167
+worker-1  | 2026-11-14 19:32:40,908 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:41,598 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:32:41,627 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:41,687 INFO spatify.worker.dvc: Running stage 'register':
+worker-1  | 2026-11-14 19:32:41,687 INFO spatify.worker.dvc: > mlflow run . -e register --env-manager=local --experiment-name spatify --run-name register
+worker-1  | 2026-11-14 19:32:44,533 INFO spatify.worker.dvc: 2026/11/14 19:32:44 INFO mlflow.projects.utils: === Created directory /tmp/tmpy1_51j90 for downloading remote URIs passed to arguments of type 'path' ===
+worker-1  | 2026-11-14 19:32:44,533 INFO spatify.worker.dvc: 2026/11/14 19:32:44 INFO mlflow.projects.backend.local: === Running command 'python -m spatify.model.register' in run with ID 'c0cf78f0703144cf9e02d9393bcef4bc' ===
+worker-1  | 2026-11-14 19:32:46,857 INFO spatify.worker.dvc: Registered model 'spatify' already exists. Creating a new version of this model...
+worker-1  | 2026-11-14 19:32:46,934 INFO spatify.worker.dvc: 2026/11/14 19:32:46 INFO mlflow.store.model_registry.abstract_store: Waiting up to 300 seconds for model version to finish creation. Model name: spatify, version 5
+worker-1  | 2026-11-14 19:32:46,935 INFO spatify.worker.dvc: Created version '5' of model 'spatify'.
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/56 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:   2%|▏         | 1/56 [00:00<00:00, 7570.95it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:   4%|▎         | 2/56 [00:00<00:00, 9000.65it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 3/56 [00:00<00:00, 10847.34it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:   7%|▋         | 4/56 [00:00<00:00, 12473.77it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:   9%|▉         | 5/56 [00:00<00:00, 13626.72it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 6/56 [00:00<00:00, 14847.09it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  12%|█▎        | 7/56 [00:00<00:00, 15583.93it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▍        | 8/56 [00:00<00:00, 16504.89it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 9/56 [00:00<00:00, 17387.72it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  18%|█▊        | 10/56 [00:00<00:00, 18204.44it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  20%|█▉        | 11/56 [00:00<00:00, 18870.08it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  21%|██▏       | 12/56 [00:00<00:00, 19388.15it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  23%|██▎       | 13/56 [00:00<00:00, 19892.72it/s]
+worker-1  | 2026-11-14 19:32:47,423 INFO spatify.worker.dvc: Downloading artifacts:  25%|██▌       | 14/56 [00:00<00:00, 20396.06it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 15/56 [00:00<00:00, 20881.04it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  29%|██▊       | 16/56 [00:00<00:00, 21317.94it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  30%|███       | 17/56 [00:00<00:00, 21725.52it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 18/56 [00:00<00:00, 21953.32it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  34%|███▍      | 19/56 [00:00<00:00, 22303.88it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  36%|███▌      | 20/56 [00:00<00:00, 22647.43it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 21/56 [00:00<00:00, 22949.55it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  39%|███▉      | 22/56 [00:00<00:00, 23237.14it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 23/56 [00:00<00:00, 23506.09it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 24/56 [00:00<00:00, 23763.76it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  45%|████▍     | 25/56 [00:00<00:00, 24005.86it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▋     | 26/56 [00:00<00:00, 24222.99it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  48%|████▊     | 27/56 [00:00<00:00, 24369.75it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  50%|█████     | 28/56 [00:00<00:00, 24517.85it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  52%|█████▏    | 29/56 [00:00<00:00, 24672.38it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▎    | 30/56 [00:00<00:00, 24833.06it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  55%|█████▌    | 31/56 [00:00<00:00, 25004.50it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 32/56 [00:00<00:00, 25167.40it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 33/56 [00:00<00:00, 25327.00it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  61%|██████    | 34/56 [00:00<00:00, 25420.02it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▎   | 35/56 [00:00<00:00, 25548.32it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  64%|██████▍   | 36/56 [00:00<00:00, 25683.78it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  66%|██████▌   | 37/56 [00:00<00:00, 25749.00it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 38/56 [00:00<00:00, 25878.15it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  70%|██████▉   | 39/56 [00:00<00:00, 26006.02it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  71%|███████▏  | 40/56 [00:00<00:00, 26092.09it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 41/56 [00:00<00:00, 26218.40it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  75%|███████▌  | 42/56 [00:00<00:00, 26339.83it/s]
+worker-1  | 2026-11-14 19:32:47,424 INFO spatify.worker.dvc: Downloading artifacts:  77%|███████▋  | 43/56 [00:00<00:00, 26448.90it/s]
+worker-1  | 2026-11-14 19:32:47,442 INFO spatify.worker.dvc: Downloading artifacts:  79%|███████▊  | 44/56 [00:00<00:00, 26557.69it/s]
+worker-1  | 2026-11-14 19:32:47,443 INFO spatify.worker.dvc: Downloading artifacts:  80%|████████  | 45/56 [00:00<00:00, 2342.26it/s]
+worker-1  | 2026-11-14 19:32:47,447 INFO spatify.worker.dvc: Downloading artifacts:  82%|████████▏ | 46/56 [00:00<00:00, 2236.70it/s]
+worker-1  | 2026-11-14 19:32:47,452 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 47/56 [00:00<00:00, 1953.31it/s]
+worker-1  | 2026-11-14 19:32:47,456 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▌ | 48/56 [00:00<00:00, 1665.34it/s]
+worker-1  | 2026-11-14 19:32:47,461 INFO spatify.worker.dvc: Downloading artifacts:  88%|████████▊ | 49/56 [00:00<00:00, 1461.36it/s]
+worker-1  | 2026-11-14 19:32:47,464 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 50/56 [00:00<00:00, 1315.59it/s]
+worker-1  | 2026-11-14 19:32:47,477 INFO spatify.worker.dvc: Downloading artifacts:  91%|█████████ | 51/56 [00:00<00:00, 1253.46it/s]
+worker-1  | 2026-11-14 19:32:47,480 INFO spatify.worker.dvc: Downloading artifacts:  93%|█████████▎| 52/56 [00:00<00:00, 955.28it/s]
+worker-1  | 2026-11-14 19:32:47,480 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 53/56 [00:00<00:00, 928.34it/s]
+worker-1  | 2026-11-14 19:32:47,480 INFO spatify.worker.dvc: Downloading artifacts:  96%|█████████▋| 54/56 [00:00<00:00, 940.18it/s]
+worker-1  | 2026-11-14 19:32:47,481 INFO spatify.worker.dvc: Downloading artifacts:  98%|█████████▊| 55/56 [00:00<00:00, 955.47it/s]
+worker-1  | 2026-11-14 19:32:47,481 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 968.36it/s]
+worker-1  | 2026-11-14 19:32:47,481 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 56/56 [00:00<00:00, 966.89it/s]
+worker-1  | 2026-11-14 19:32:47,889 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:   0%|          | 0/37 [00:00<?, ?it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:   3%|▎         | 1/37 [00:00<00:00, 8050.49it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:   5%|▌         | 2/37 [00:00<00:00, 8802.32it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:   8%|▊         | 3/37 [00:00<00:00, 10280.16it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  11%|█         | 4/37 [00:00<00:00, 11459.85it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  14%|█▎        | 5/37 [00:00<00:00, 12446.01it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  16%|█▌        | 6/37 [00:00<00:00, 13486.51it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  19%|█▉        | 7/37 [00:00<00:00, 14420.50it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  22%|██▏       | 8/37 [00:00<00:00, 14814.32it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  24%|██▍       | 9/37 [00:00<00:00, 15307.68it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  27%|██▋       | 10/37 [00:00<00:00, 15917.66it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  30%|██▉       | 11/37 [00:00<00:00, 16471.74it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  32%|███▏      | 12/37 [00:00<00:00, 16946.68it/s]
+worker-1  | 2026-11-14 19:32:47,890 INFO spatify.worker.dvc: Downloading artifacts:  35%|███▌      | 13/37 [00:00<00:00, 17403.75it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  38%|███▊      | 14/37 [00:00<00:00, 17815.61it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  41%|████      | 15/37 [00:00<00:00, 18225.54it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  43%|████▎     | 16/37 [00:00<00:00, 18528.12it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  46%|████▌     | 17/37 [00:00<00:00, 18843.33it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  49%|████▊     | 18/37 [00:00<00:00, 19084.30it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  51%|█████▏    | 19/37 [00:00<00:00, 19342.66it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  54%|█████▍    | 20/37 [00:00<00:00, 19585.82it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  57%|█████▋    | 21/37 [00:00<00:00, 19820.07it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  59%|█████▉    | 22/37 [00:00<00:00, 19998.85it/s]
+worker-1  | 2026-11-14 19:32:47,891 INFO spatify.worker.dvc: Downloading artifacts:  62%|██████▏   | 23/37 [00:00<00:00, 14230.56it/s]
+worker-1  | 2026-11-14 19:32:47,914 INFO spatify.worker.dvc: Downloading artifacts:  65%|██████▍   | 24/37 [00:00<00:00, 13686.38it/s]
+worker-1  | 2026-11-14 19:32:47,926 INFO spatify.worker.dvc: Downloading artifacts:  68%|██████▊   | 25/37 [00:00<00:00, 1039.71it/s]
+worker-1  | 2026-11-14 19:32:47,930 INFO spatify.worker.dvc: Downloading artifacts:  70%|███████   | 26/37 [00:00<00:00, 717.47it/s]
+worker-1  | 2026-11-14 19:32:47,942 INFO spatify.worker.dvc: Downloading artifacts:  73%|███████▎  | 27/37 [00:00<00:00, 677.13it/s]
+worker-1  | 2026-11-14 19:32:47,944 INFO spatify.worker.dvc: Downloading artifacts:  76%|███████▌  | 28/37 [00:00<00:00, 536.60it/s]
+worker-1  | 2026-11-14 19:32:47,944 INFO spatify.worker.dvc: Downloading artifacts:  78%|███████▊  | 29/37 [00:00<00:00, 535.14it/s]
+worker-1  | 2026-11-14 19:32:47,946 INFO spatify.worker.dvc: Downloading artifacts:  81%|████████  | 30/37 [00:00<00:00, 551.83it/s]
+worker-1  | 2026-11-14 19:32:47,948 INFO spatify.worker.dvc: Downloading artifacts:  84%|████████▍ | 31/37 [00:00<00:00, 553.32it/s]
+worker-1  | 2026-11-14 19:32:47,949 INFO spatify.worker.dvc: Downloading artifacts:  86%|████████▋ | 32/37 [00:00<00:00, 552.44it/s]
+worker-1  | 2026-11-14 19:32:47,950 INFO spatify.worker.dvc: Downloading artifacts:  89%|████████▉ | 33/37 [00:00<00:00, 557.82it/s]
+worker-1  | 2026-11-14 19:32:47,950 INFO spatify.worker.dvc: Downloading artifacts:  92%|█████████▏| 34/37 [00:00<00:00, 562.88it/s]
+worker-1  | 2026-11-14 19:32:47,951 INFO spatify.worker.dvc: Downloading artifacts:  95%|█████████▍| 35/37 [00:00<00:00, 576.33it/s]
+worker-1  | 2026-11-14 19:32:47,952 INFO spatify.worker.dvc: Downloading artifacts:  97%|█████████▋| 36/37 [00:00<00:00, 588.92it/s]
+worker-1  | 2026-11-14 19:32:47,952 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 37/37 [00:00<00:00, 595.44it/s]
+worker-1  | 2026-11-14 19:32:47,952 INFO spatify.worker.dvc: Downloading artifacts: 100%|██████████| 37/37 [00:00<00:00, 594.54it/s]
+worker-1  | 2026-11-14 19:32:50,409 INFO spatify.worker.dvc: 🏃 View run register at: http://mlflow:5000/#/experiments/1/runs/c0cf78f0703144cf9e02d9393bcef4bc
+worker-1  | 2026-11-14 19:32:50,409 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:50,451 INFO spatify.worker.dvc: 2026-11-14 19:32:50,451 INFO __main__: Registered spatify version 5 (no_tonal-uniform): not promoted, gain -0.003 < 0.005; version 1 stays champion
+worker-1  | 2026-11-14 19:32:50,880 INFO spatify.worker.dvc: 2026/11/14 19:32:50 INFO mlflow.projects: === Run (ID 'c0cf78f0703144cf9e02d9393bcef4bc') succeeded ===
+worker-1  | 2026-11-14 19:32:50,921 INFO spatify.worker.dvc: 🏃 View run register at: http://mlflow:5000/#/experiments/1/runs/c0cf78f0703144cf9e02d9393bcef4bc
+worker-1  | 2026-11-14 19:32:50,921 INFO spatify.worker.dvc: 🧪 View experiment at: http://mlflow:5000/#/experiments/1
+worker-1  | 2026-11-14 19:32:51,584 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:32:51,685 INFO spatify.worker.dvc: Use `dvc push` to send your updates to remote storage.
+worker-1  | 2026-11-14 19:32:51,919 INFO spatify.worker: Run 240 (drift) succeeded in 82 s. Drift in shifted_01.csv, so the model was retrained. Registered version 5: not promoted (gain -0.003); version 1 keeps serving.
+worker-1  | 2026-11-14 19:36:39,574 INFO spatify.worker.dvc: 'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:36:39,585 INFO spatify.worker.dvc: Stage 'make_batches' didn't change, skipping
+worker-1  | 2026-11-14 19:36:39,587 INFO spatify.worker.dvc: 'data/incoming.dvc' didn't change, skipping
+worker-1  | 2026-11-14 19:36:39,597 INFO spatify.worker.dvc: Running stage 'ingest':
+worker-1  | 2026-11-14 19:36:39,597 INFO spatify.worker.dvc: > python -m spatify.pipeline.ingest
+worker-1  | 2026-11-14 19:36:40,756 INFO spatify.worker.dvc: 2026-11-14 19:36:40,756 INFO __main__: Ingesting 4 files: tracks.csv, bad_batch.csv, normal_01.csv, shifted_01.csv
+worker-1  | 2026-11-14 19:36:44,287 INFO spatify.worker.dvc: 2026-11-14 19:36:44,287	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:36:46,096 INFO spatify.worker.dvc: 2026-11-14 19:36:46,096	WARNING file_datasink.py:114 -- [SaveMode=SaveMode.OVERWRITE] Replacing contents /repo/data/ingested
+worker-1  | 2026-11-14 19:36:46,615 INFO spatify.worker.dvc: 2026-11-14 19:36:46,615 INFO __main__: Ingested 85970 rows in 2.4 s (35498 rows/s)
+worker-1  | 2026-11-14 19:36:48,568 INFO spatify.worker.dvc: Updating lock file 'dvc.lock'
+worker-1  | 2026-11-14 19:36:48,593 INFO spatify.worker.dvc:
+worker-1  | 2026-11-14 19:36:48,650 INFO spatify.worker.dvc: Running stage 'validate':
+worker-1  | 2026-11-14 19:36:48,650 INFO spatify.worker.dvc: > python -m spatify.pipeline.validate
+worker-1  | 2026-11-14 19:36:53,498 INFO spatify.worker.dvc: 2026-11-14 19:36:53,498	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+worker-1  | 2026-11-14 19:36:58,076 INFO spatify.worker.dvc: 2026-11-14 19:36:58,075 INFO __main__: 85970 rows: 85459 valid, 511 rejected (0.59%) in 4.7 s (18349 rows/s)
+worker-1  | 2026-11-14 19:36:58,076 INFO spatify.worker.dvc: 2026-11-14 19:36:58,076 ERROR __main__: Reject rate above 5% in bad_batch.csv; stopping the pipeline. See data/validated/rejected.csv for the rejected rows and their reasons.
+worker-1  | 2026-11-14 19:36:59,924 INFO spatify.worker.dvc: ERROR: failed to reproduce 'validate': failed to run: python -m spatify.pipeline.validate, exited with 1
+worker-1  | 2026-11-14 19:37:01,252 INFO spatify.worker: Run 241 (new_data) failed in 24 s. Validation rejected bad_batch.csv (21.6% of rows invalid); moved to data/quarantine/. The champion keeps serving. Any other new batches are checked again on the next run.

@@ -1,4 +1,4 @@
-# Spatify stack: Postgres, the MLflow server, the model server, the gateway and the frontend.
+# Spatify stack: Postgres, MLflow, the model server, the gateway, the frontend and the worker.
 #
 #   docker compose up -d --build        start (secrets come from .env; see .env.example)
 #   docker compose ps                   health of each service
@@ -6,12 +6,13 @@
 #   docker compose down                 stop (data stays in the named volumes)
 #
 # Services find each other by service name on the Compose network. Published, on
-# localhost only: the web app (8501), its metrics (9101), the gateway (8000) and the
-# MLflow UI (5000). Phase 5 adds the worker, Phase 6 Prometheus and Grafana.
+# localhost only: the web app (8501), the gateway (8000), the MLflow UI (5000) and the
+# frontend's and worker's metrics (9101, 9102). Phase 6 adds Prometheus and Grafana.
 #
 # Memory (D30): every service has a hard limit with no swap, so a runaway service is
-# stopped and restarted instead of pushing the laptop into swap. The whole stack fits
-# in about 1 GB; `docker stats` shows each service's use against its limit.
+# stopped and restarted instead of pushing the laptop into swap. Idle, the stack uses
+# about 1.5 GB; the worker adds up to 2 GB while the pipeline runs. `docker stats`
+# shows each service's use against its limit.
 
 name: spatify
 
@@ -172,6 +173,46 @@ services:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=4)"]
       start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+      # The repo is mounted read-write and belongs to the host user (uid 1000 on this
+      # drive); the image runs as a user with the same uid, so the files it writes stay
+      # the host user's. Set HOST_UID/HOST_GID in .env if yours differ (`id -u`, `id -g`).
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: spatify/worker:latest
+    restart: unless-stopped
+    mem_limit: 3g
+    memswap_limit: 3g
+    shm_size: 1.5gb  # Ray keeps its 1 GB object store in /dev/shm
+    stop_grace_period: 3m  # a stop waits for the pipeline run in progress to finish
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/spatify
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      REPO_DIR: /repo
+      POLL_SECONDS: "15"
+      METRICS_PORT: "9102"
+      SPATIFY_RAY_CPUS: "4"
+      SPATIFY_RAY_OBJECT_STORE_MB: "1024"
+      MLFLOW_HTTP_REQUEST_MAX_RETRIES: "2"
+    volumes:
+      - ./:/repo
+    ports:
+      - "127.0.0.1:9102:9102"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:9102/metrics', timeout=4)"]
+      start_period: 20s
 
 volumes:
   postgres-data:

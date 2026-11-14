@@ -155,9 +155,9 @@ stages:
     deps:
     - path: data/validated
       hash: md5
-      md5: 28bfc2cc89ef835be369b775b69dc1c8.dir
-      size: 11651141
-      nfiles: 14
+      md5: 3bb18abe5c01264434ae718c558e028b.dir
+      size: 8710112
+      nfiles: 9
     - path: src/spatify/pipeline/common.py
       hash: md5
       md5: de378cb9e228ef9e16f322ed453a2008
@@ -191,12 +191,12 @@ stages:
     outs:
     - path: data/features
       hash: md5
-      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
-      size: 9765844
+      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
+      size: 10317796
       nfiles: 6
     - path: metrics/features.json
       hash: md5
-      md5: 46339827e56909267fd82cf9fdcbdd76
+      md5: 943de2c59d0ac5d9064474f751f50b70
       size: 142
   eda:
     cmd: python scripts/eda.py
@@ -224,8 +224,8 @@ stages:
       size: 1430
     - path: uv.lock
       hash: md5
-      md5: ce73e3e7797d5480d0df29c4ee09f071
-      size: 984916
+      md5: 3f0e2dbd07747014249899200035c3ac
+      size: 985211
     outs:
     - path: python_env.yaml
       hash: md5
@@ -241,8 +241,8 @@ stages:
       size: 648
     - path: data/features
       hash: md5
-      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
-      size: 9765844
+      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
+      size: 10317796
       nfiles: 6
     - path: python_env.yaml
       hash: md5
@@ -306,7 +306,7 @@ stages:
     outs:
     - path: models/candidates.json
       hash: md5
-      md5: a060ce0e83aaeb9767c4a29a43d3197a
+      md5: aec7e71093c574a164054bb9a99b123b
       size: 1463
   evaluate:
     cmd: mlflow run . -e evaluate --env-manager=local --experiment-name spatify
@@ -314,12 +314,12 @@ stages:
     deps:
     - path: data/features
       hash: md5
-      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
-      size: 9765844
+      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
+      size: 10317796
       nfiles: 6
     - path: models/candidates.json
       hash: md5
-      md5: a060ce0e83aaeb9767c4a29a43d3197a
+      md5: aec7e71093c574a164054bb9a99b123b
       size: 1463
     - path: src/spatify/model/data.py
       hash: md5
@@ -345,32 +345,32 @@ stages:
     outs:
     - path: metrics/evaluate.json
       hash: md5
-      md5: 0586180fcc65e4aa6ac58895df08cfa0
-      size: 1426
+      md5: 8858f876cf467f477179ae917a7bbc0e
+      size: 1430
     - path: reports/evaluate/variants.csv
       hash: md5
-      md5: 6f959624ccc8784f414e7fb3a9656926
-      size: 495
+      md5: 40ff5662a80585934eb1a964bd00e5be
+      size: 493
     - path: reports/evaluate/variants.png
       hash: md5
-      md5: c1e50f1fae9ea3e108a7dd7fb3515782
-      size: 48777
+      md5: 7fcf5d5670081a537d9bbb8f6a8be746
+      size: 48813
   register:
     cmd: mlflow run . -e register --env-manager=local --experiment-name spatify
       --run-name register
     deps:
     - path: data/features
       hash: md5
-      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
-      size: 9765844
+      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
+      size: 10317796
       nfiles: 6
     - path: metrics/evaluate.json
       hash: md5
-      md5: 0586180fcc65e4aa6ac58895df08cfa0
-      size: 1426
+      md5: 8858f876cf467f477179ae917a7bbc0e
+      size: 1430
     - path: models/candidates.json
       hash: md5
-      md5: a060ce0e83aaeb9767c4a29a43d3197a
+      md5: aec7e71093c574a164054bb9a99b123b
       size: 1463
     - path: src/spatify/model/data.py
       hash: md5
@@ -399,5 +399,44 @@ stages:
     outs:
     - path: metrics/register.json
       hash: md5
-      md5: 02ac6aeafb5624ce4c6cc4779b266a62
-      size: 262
+      md5: 7788a56dddb1b7d7c9f293e87ddd601b
+      size: 271
+  drift_check:
+    cmd: python -m spatify.pipeline.drift
+    deps:
+    - path: data/validated
+      hash: md5
+      md5: 28bfc2cc89ef835be369b775b69dc1c8.dir
+      size: 11651141
+      nfiles: 14
+    - path: src/spatify/pipeline/common.py
+      hash: md5
+      md5: de378cb9e228ef9e16f322ed453a2008
+      size: 4257
+    - path: src/spatify/pipeline/drift.py
+      hash: md5
+      md5: f9b42eeef65007db985e2cb8e6368eed
+      size: 4747
+    params:
+      params.yaml:
+        drift:
+          reference: tracks.csv
+          features:
+          - danceability
+          - energy
+          - loudness
+          - speechiness
+          - acousticness
+          - instrumentalness
+          - liveness
+          - valence
+          - tempo
+          bins: 10
+          psi_moderate: 0.1
+          psi_major: 0.2
+          min_moderate: 2
+    outs:
+    - path: metrics/drift.json
+      hash: md5
+      md5: 02e2211e3897079adb7fc7f2fd96bf39
+      size: 193

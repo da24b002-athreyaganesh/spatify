@@ -240,3 +240,50 @@ def like_rate_chart(versions: list[dict]) -> alt.Chart | None:
         )  # fmt: skip
         .properties(height=40 * len(rows) + 60)
     )
+
+
+LEVEL_COLOURS = {"stable": BLUE, "moderate": ORANGE, "major": VERMILLION}
+
+
+def drift_chart(batch: dict, thresholds: dict) -> alt.Chart:
+    """Bars: PSI per feature for one batch, coloured by level, with the threshold lines."""
+    rows = pd.DataFrame(batch["features"])
+    bars = (
+        alt.Chart(rows)
+        .mark_bar()
+        .encode(
+            x=alt.X("psi:Q", title="PSI against the training data (linear scale)"),
+            y=alt.Y("feature:N", title="audio feature", sort="-x"),
+            color=alt.Color(
+                "level:N",
+                title="level",
+                scale=alt.Scale(domain=list(LEVEL_COLOURS), range=list(LEVEL_COLOURS.values())),
+            ),
+            tooltip=[
+                "feature",
+                alt.Tooltip("psi:Q", format=".3f"),
+                "level",
+                alt.Tooltip("ks_pvalue:Q", title="KS p-value", format=".2g"),
+            ],
+        )  # fmt: skip
+    )
+    lines = pd.DataFrame(
+        [
+            {"psi": thresholds.get("psi_moderate", 0.1), "label": "moderate"},
+            {"psi": thresholds.get("psi_major", 0.2), "label": "major"},
+        ]
+    )
+    rules = alt.Chart(lines).mark_rule(color=GREY, strokeDash=[4, 3]).encode(x="psi:Q")
+    labels = (
+        alt.Chart(lines)
+        .mark_text(align="left", dx=3, dy=-4, color=GREY, fontSize=10)
+        .encode(x="psi:Q", y=alt.value(0), text="label:N")
+    )
+    return (bars + rules + labels).properties(
+        title=alt.Title(
+            f"Drift of {batch['name']}, by feature",
+            subtitle="How far each feature moved from the training data; dashed lines: "
+            "0.1 moderate, 0.2 major.",
+        ),
+        height=28 * len(rows) + 60,
+    )

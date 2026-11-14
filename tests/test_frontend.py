@@ -64,7 +64,7 @@ VERSIONS = [
 
 class FakeGateway:
     def __init__(self):
-        self.calls, self.down = [], False
+        self.calls, self.down, self.drift = [], False, None
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         if self.down:
@@ -156,7 +156,9 @@ class FakeGateway:
                 return httpx.Response(401, json={"detail": "Missing or wrong X-API-Key header"})
             return httpx.Response(202, json={"id": 7, "status": "requested"})
         if path == "/drift":
-            return httpx.Response(501, json={"detail": "Drift monitoring is not available yet"})
+            if self.drift is None:
+                return httpx.Response(404, json={"detail": "No drift report yet"})
+            return httpx.Response(200, json=self.drift)
         return httpx.Response(404, json={"detail": "not found"})
 
 
@@ -226,7 +228,7 @@ def test_gateway_down_is_a_friendly_message_not_a_crash(gateway):
 def test_console_shows_pipeline_models_and_drift(gateway):
     at = page("console")
     assert len(at.get("graphviz_chart")) == 1
-    assert "isn't available yet" in texts(at.info)  # drift arrives in Phase 5
+    assert "No drift report yet" in texts(at.info)  # before the first batch
     assert "No pipeline runs recorded yet" in texts(at.info)
     assert at.button(key="rollback").disabled  # no key, not confirmed
     assert at.button(key="run-pipeline").disabled
@@ -277,3 +279,55 @@ def test_the_app_opens_on_discover_and_navigates(gateway):
     for view, title in (("console", "Operator console"), ("help", "Help")):
         at.switch_page(f"views/{view}.py").run()
         assert not at.exception and at.title[0].value == title
+
+
+DRIFT = {
+    "reference_rows": 79970,
+    "thresholds": {"psi_moderate": 0.1, "psi_major": 0.2, "min_moderate": 2},
+    "batches": [
+        {
+            "name": "bad_batch.csv",
+            "status": "quarantined",
+            "first_seen": "2026-11-15T10:02:00Z",
+            "message": "21.6% of rows were invalid",
+            "rows": None,
+            "drifted": None,
+            "features": [],
+        },
+        {
+            "name": "shifted_01.csv",
+            "status": "processed",
+            "first_seen": "2026-11-15T10:01:00Z",
+            "message": None,
+            "rows": 1960,
+            "drifted": True,
+            "features": [
+                {
+                    "feature": "energy",
+                    "psi": 0.21,
+                    "ks_stat": 0.2,
+                    "ks_pvalue": 1e-20,
+                    "level": "major",
+                },
+                {
+                    "feature": "tempo",
+                    "psi": 0.14,
+                    "ks_stat": 0.1,
+                    "ks_pvalue": 1e-9,
+                    "level": "moderate",
+                },
+            ],
+        },
+    ],
+}
+
+
+def test_console_shows_each_batch_and_the_latest_drift(gateway):
+    gateway.drift = DRIFT
+    at = page("console")
+    table = at.dataframe[-2].value  # the batches table, above the chosen batch's details
+    assert list(table["batch"]) == ["bad_batch.csv", "shifted_01.csv"]
+    assert list(table["result"]) == ["rejected (quarantined)", "checked"]
+    assert at.selectbox(key="drift_batch").value["name"] == "shifted_01.csv"  # the latest scored
+    assert "has drifted" in texts(at.warning)
+    assert ui.drift_chart(DRIFT["batches"][1], DRIFT["thresholds"]) is not None

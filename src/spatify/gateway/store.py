@@ -17,45 +17,8 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
+from spatify.db_schema import SCHEMA
 from spatify.gateway.metrics import DB_ERRORS, DB_SECONDS
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS recommendations (
-    request_id    uuid PRIMARY KEY,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    seed_track_id text,
-    sliders       jsonb NOT NULL DEFAULT '{}',
-    k             integer NOT NULL,
-    model_version integer,
-    model_run_id  text NOT NULL,
-    track_ids     text[] NOT NULL
-);
-CREATE TABLE IF NOT EXISTS feedback (
-    id            bigserial PRIMARY KEY,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    request_id    uuid NOT NULL REFERENCES recommendations (request_id),
-    track_id      text NOT NULL,
-    rank          integer NOT NULL,
-    action        text NOT NULL CHECK (action IN ('like', 'skip')),
-    model_version integer,
-    model_run_id  text NOT NULL,
-    UNIQUE (request_id, track_id)
-);
-CREATE INDEX IF NOT EXISTS feedback_created_at ON feedback (created_at);
-CREATE TABLE IF NOT EXISTS pipeline_runs (
-    id            bigserial PRIMARY KEY,
-    requested_at  timestamptz NOT NULL DEFAULT now(),
-    started_at    timestamptz,
-    finished_at   timestamptz,
-    trigger       text NOT NULL,
-    status        text NOT NULL DEFAULT 'requested'
-                  CHECK (status IN ('requested', 'running', 'succeeded', 'failed')),
-    stages        jsonb NOT NULL DEFAULT '{}',
-    model_version integer,
-    promoted      boolean,
-    message       text
-);
-"""
 
 
 class Store:
@@ -161,6 +124,14 @@ class Store:
                 "SELECT status, count(*) AS n FROM pipeline_runs GROUP BY status"
             ).fetchall()
         return {r["status"]: r["n"] for r in rows}
+
+    def incoming_batches(self) -> list[dict]:
+        """Batch files the worker has seen, newest first."""
+        with self._timed("incoming_batches") as conn:
+            return conn.execute(
+                "SELECT name, status, first_seen, drifted, message FROM incoming_batches"
+                " ORDER BY first_seen DESC, name"
+            ).fetchall()
 
     def request_pipeline_run(self, trigger: str) -> dict:
         """Queue a pipeline run; the worker (Phase 5) picks up `requested` rows."""

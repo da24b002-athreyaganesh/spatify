@@ -48,9 +48,10 @@ from spatify.gateway.model_client import (
     ModelServerUnavailableError,
     QueryRejectedError,
 )
-from spatify.gateway.pipeline_view import PipelineUnavailableError, load_dag
+from spatify.gateway.pipeline_view import PipelineUnavailableError, drift_view, load_dag
 from spatify.gateway.registry import Registry, RegistryError
 from spatify.gateway.schemas import (
+    DriftReport,
     FeedbackRequest,
     FeedbackResponse,
     Health,
@@ -362,9 +363,20 @@ def create_app(
         """Queue a pipeline run; the worker picks it up."""
         return store.request_pipeline_run((body or TriggerRequest()).trigger)
 
-    @app.get("/drift", tags=["operator"])
-    def drift() -> None:
-        raise HTTPException(501, "Drift monitoring is not available yet")
+    @app.get("/drift", response_model=DriftReport, tags=["operator"])
+    def drift() -> dict:
+        """Each incoming batch's drift from the training data (PSI and KS), newest first."""
+        try:
+            seen = store.incoming_batches()
+        except Exception:  # the report alone is still useful
+            log.warning("Couldn't read the batch records", exc_info=True)
+            seen = []
+        view = drift_view(Path(settings.pipeline_dir), seen)
+        if view is None:
+            raise HTTPException(
+                404, "No drift report yet: the worker checks each batch dropped into data/incoming"
+            )
+        return view
 
     @app.get("/health", response_model=Health, tags=["service"])
     def health(response: Response) -> Health:

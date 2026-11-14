@@ -202,3 +202,41 @@ One entry per design decision: what was chosen, why, and what else was considere
   The diagram matches `dvc dag`.
 - **Colours:** a stage's last result comes from the latest run the worker recorded, once Phase 5's worker reports results per stage. Until then a stage recorded in `dvc.lock` counts as last run successfully, and one missing from it as never run.
 - **Considered:** running `dvc dag --dot` inside the gateway, which would put DVC and the whole repo into the gateway image.
+
+## D35. Drift: PSI decides, KS reports, against the base catalogue
+- **How:** the `drift_check` stage compares each incoming batch with the reference, feature by feature, for the nine continuous audio features:
+  - **PSI** over ten bins cut at the reference's deciles.
+  - **The two-sample KS test** (statistic and p-value).
+  The reference is the base catalogue's validated rows, the data every model is trained on.
+- **Rule:** a feature is *major* at PSI ≥ 0.2, *moderate* at 0.1–0.2 and *stable* below, the usual rule of thumb. A batch has drifted when any feature is major, or at least two are moderate (`params.yaml` → `drift`).
+- **Calibrated on the generated batches:**
+  - **Normal batches:** the largest PSI is 0.005–0.012.
+  - **Shifted batches** (10 held-out genres): energy reaches 0.205–0.212, and two or three more features are moderate.
+  - **Drifted batches** (energy, loudness and acousticness shifted): acousticness reaches about 1.6.
+
+  A single 0.2 cut-off would catch the shifted batches by a hair; the two-tier rule catches them clearly, and normal batches sit far below either line.
+- **Why KS doesn't decide:** against about 80,000 reference rows, KS finds even normal batches different (normal_03 has 2 features at p < 0.01). Its p-values measure sample size as much as shift. It is reported next to PSI.
+- **Where it lives:**
+  - It sits after validate and beside features, so `dvc repro drift_check` checks new data without retraining.
+  - The results are in `metrics/drift.json` (DVC metrics), the gateway's `/drift` (the console), and the worker's `spatify_drift_psi{feature}` and `spatify_drift_detected` gauges (Prometheus, for Phase 6's alerts). Exposing drift scores as metrics is the problem statement's FR4.
+- **Limit:** after a drift-triggered retrain, the model has learnt the shifted batch, but later batches are still compared with the base catalogue, so a similar batch is flagged again. Re-baselining on the champion's own training data (logged as `drift/reference.parquet` with each training run) would tie a plain DVC stage to MLflow; left as it is.
+
+## D36. The worker: a polling loop that runs DVC in the mounted repo
+- **Each check (every 15 s):**
+  1. **A run queued from the console or the API:** bring the data up to date, then retrain. If training was already up to date, the worker forces it, since someone asked for a retrain.
+  2. **Otherwise, new, changed or removed files in `data/incoming`:** `dvc add data/incoming`, then `dvc repro drift_check`. If a new batch has drifted, retrain with the trigger `drift`. If not, record the data and leave the model alone, as FR5 asks ("retrain when drift or feedback crosses a threshold").
+  3. **Otherwise, nothing.**
+- **What's recorded:**
+  - **`pipeline_runs`:** each run's trigger and result, each stage's result and seconds (read from DVC's own output), the model version registered, whether it was promoted, and a one-line explanation. The console's run history, the pipeline diagram's colours and the worker's Prometheus metrics all come from this.
+  - **`incoming_batches`:** every batch file by its SHA-256, and what became of it.
+- **Failure leaves the champion serving:** only the register stage moves the alias, and DVC never runs a stage after a failed one.
+  - **A batch that validation rejects** is moved to `data/quarantine/`; otherwise it would fail again on every check. Good batches dropped with it go through on the next check.
+  - **A failure anywhere else** marks that run's batches as failed, so the worker doesn't retry them every 15 s.
+  - **A run left 'running' by a worker that stopped mid-run** is marked failed when the worker restarts. Compose gives a stopping worker 3 minutes to finish its run.
+  - **No retry storms.** An unexpected error marks the run's batches failed too, and after any failed run the worker waits a full poll interval. The first version had neither: a missing user account made it fail and retry about once a second (236 runs). Restarting the worker puts failed batches back in line, so after fixing a cause, a restart retries.
+- **It runs the repo's own code** (`PYTHONPATH=/repo/src`; the image holds only the dependencies). So the stages that run are exactly the code DVC hashed as their dependencies, even after an edit without a rebuild.
+- **It runs as the repo's owner** (uid 1000), since the NTFS mount lets only that user write. The image has an account with that uid (a build argument): DVC and MLflow look up the current user's name, and with only a bare uid the first version failed with `getpwuid(): uid not found`.
+- **Memory:** a 3 GB limit, and 1.5 GB of `/dev/shm` for Ray's 1 GB object store. Ray is capped at 4 CPUs (D30).
+- **It doesn't commit.** It leaves `dvc.lock` and `data/incoming.dvc` updated in the working tree for the operator to commit; MLflow tags the models it trains `git_dirty=true`. Committing from a container into the user's repo would skip the pre-commit hooks and mix with whatever else the user has in progress.
+- **One pipeline at a time:** DVC locks the repo, so don't run `dvc` on the host while the worker is running.
+- **Considered:** watching the folder with inotify (unreliable on bind mounts and NTFS, hence polling); a fixed schedule (a polled queue starts a requested run within seconds). Phase 6's alerts can queue runs through the same table.

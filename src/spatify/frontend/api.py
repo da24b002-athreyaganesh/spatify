@@ -113,11 +113,11 @@ def trigger(key: str) -> dict:
 
 
 def drift() -> dict | None:
-    """The drift report, or None while drift monitoring isn't available (HTTP 501)."""
+    """The drift report, or None before the first batch has been checked (HTTP 404)."""
     try:
         return _call("GET", "/drift", "drift")
     except GatewayError as err:
-        if err.status == 501:
+        if err.status in (404, 501):
             return None
         raise
 

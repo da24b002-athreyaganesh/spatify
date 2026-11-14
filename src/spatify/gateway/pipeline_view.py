@@ -67,8 +67,9 @@ def load_dag(root: Path, latest_run: dict | None = None) -> dict:
 
     views = []
     for name, stage in stages.items():
-        if isinstance(reported.get(name), dict) and reported[name].get("status"):
-            status = reported[name]["status"]
+        result = reported.get(name)
+        if isinstance(result, dict) and result.get("status") in ("ok", "failed", "running"):
+            status = result["status"]  # a skipped stage keeps its dvc.lock status
         else:
             status = "ok" if name in locked else "not run"
         metrics = {}
@@ -94,3 +95,43 @@ def load_dag(root: Path, latest_run: dict | None = None) -> dict:
             }
         )
     return {"stages": views, "inputs": sorted(inputs), "edges": sorted(edges)}
+
+
+def drift_view(root: Path, seen: list[dict]) -> dict | None:
+    """The drift report (metrics/drift.json) joined with the batches the worker has seen.
+
+    Newest batch first. A batch validation rejected has no drift scores but is listed,
+    with the reason. None when there is neither a report nor a batch yet.
+    """
+    try:
+        report = json.loads((root / "metrics" / "drift.json").read_text())
+    except (OSError, ValueError):
+        report = {}
+    scored = report.get("batches", {})
+    if not scored and not seen:
+        return None
+
+    def batch(name: str, row: dict | None) -> dict:
+        result = scored.get(name)
+        return {
+            "name": name,
+            "status": row["status"] if row else "unknown",
+            "first_seen": row["first_seen"] if row else None,
+            "message": row.get("message") if row else None,
+            "rows": result["rows"] if result else None,
+            "drifted": result["drifted"] if result else None,
+            "features": [
+                {"feature": feature, **values} for feature, values in result["features"].items()
+            ]
+            if result
+            else [],
+        }
+
+    known = {row["name"] for row in seen}
+    batches = [batch(row["name"], row) for row in seen]
+    batches += [batch(name, None) for name in sorted(scored) if name not in known]
+    return {
+        "reference_rows": report.get("reference_rows"),
+        "thresholds": report.get("thresholds", {}),
+        "batches": batches,
+    }

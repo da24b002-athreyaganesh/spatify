@@ -51,6 +51,17 @@ stages:
     metrics:
     - metrics/features.json:
         cache: false
+  drift_check:
+    cmd: python -m spatify.pipeline.drift
+    deps:
+    - data/validated
+    - src/spatify/pipeline/common.py
+    - src/spatify/pipeline/drift.py
+    params:
+    - drift
+    metrics:
+    - metrics/drift.json:
+        cache: false
   eda:
     cmd: python scripts/eda.py
     deps:

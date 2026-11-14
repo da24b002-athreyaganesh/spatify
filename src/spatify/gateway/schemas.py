@@ -158,6 +158,30 @@ class PipelineDag(BaseModel):
     edges: list[tuple[str, str]] = Field(description="(from, to): stage or input to stage")
 
 
+class DriftFeature(BaseModel):
+    feature: str
+    psi: float = Field(description="Population Stability Index against the training data")
+    ks_stat: float = Field(description="Kolmogorov-Smirnov statistic")
+    ks_pvalue: float
+    level: str = Field(description="stable (< 0.1), moderate (0.1-0.2) or major (>= 0.2)")
+
+
+class DriftBatch(BaseModel):
+    name: str
+    status: str = Field(description="new, processed, quarantined, failed, removed or unknown")
+    first_seen: datetime | None
+    message: str | None
+    rows: int | None = Field(description="Valid rows checked; none if validation rejected it")
+    drifted: bool | None
+    features: list[DriftFeature]
+
+
+class DriftReport(BaseModel):
+    reference_rows: int | None = Field(description="Training rows the batches are compared with")
+    thresholds: dict[str, float]
+    batches: list[DriftBatch] = Field(description="Newest first")
+
+
 class TriggerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

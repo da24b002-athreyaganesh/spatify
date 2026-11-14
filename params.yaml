@@ -69,3 +69,12 @@ evaluate:
 register:
   model_name: spatify
   min_gain: 0.005         # promote only if genre match@K beats the champion by this much
+
+drift:                    # drift_check: each incoming batch against the training data (D35)
+  reference: tracks.csv   # the source whose rows are the reference (the base catalogue)
+  features: [danceability, energy, loudness, speechiness, acousticness, instrumentalness,
+             liveness, valence, tempo]
+  bins: 10                # PSI bins, cut at the reference's deciles
+  psi_moderate: 0.1       # PSI rule of thumb: < 0.1 stable, 0.1-0.2 moderate, >= 0.2 major
+  psi_major: 0.2
+  min_moderate: 2         # a batch has drifted: any major feature, or this many moderate ones
