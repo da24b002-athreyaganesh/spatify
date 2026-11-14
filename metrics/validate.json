@@ -1,0 +1,21 @@
+{
+  "rows": 79970,
+  "valid": 79970,
+  "rejected": 0,
+  "reject_rate": 0.0,
+  "max_reject_rate": 0.05,
+  "failed_sources": [],
+  "rejected_by_source": {
+    "tracks.csv": 0
+  },
+  "reject_rate_by_source": {
+    "tracks.csv": 0.0
+  },
+  "rejected_by_reason": {},
+  "warnings": {
+    "zero:tempo": 119,
+    "zero:time_signature": 6
+  },
+  "seconds": 6.728,
+  "rows_per_s": 11886.0
+}

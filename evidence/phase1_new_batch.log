@@ -1,0 +1,26 @@
+$ cp data/batches/normal_01.csv data/incoming/ && dvc add data/incoming && dvc repro  (2026-11-14T15:29:16+05:30)
+WARNING: stage: 'data/raw/spotify_tracks.csv.dvc' is frozen. Its dependencies are not going to be shown in the status output.
+ingest:
+	changed deps:
+		modified:           data/incoming
+'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+Stage 'make_batches' didn't change, skipping
+'data/incoming.dvc' didn't change, skipping
+Running stage 'ingest':
+> python -m spatify.pipeline.ingest
+2026-11-14 15:29:18,885 INFO __main__: Ingesting 2 files: tracks.csv, normal_01.csv
+2026-11-14 15:29:26,745 INFO __main__: Ingested 81970 rows in 3.3 s (24645 rows/s)
+Updating lock file 'dvc.lock'
+Running stage 'validate':
+> python -m spatify.pipeline.validate
+2026-11-14 15:29:37,845 INFO __main__: 81970 rows: 81930 valid, 40 rejected (0.05%) in 5.8 s (14242 rows/s)
+Updating lock file 'dvc.lock'
+Running stage 'features':
+> python -m spatify.pipeline.features
+2026-11-14 15:29:51,775 INFO __main__: 81930 rows -> 65761 tracks (10839 in several genres) in 8.3 s (9909 rows/s)
+Updating lock file 'dvc.lock'
+Stage 'eda' didn't change, skipping
+Use `dvc push` to send your updates to remote storage.
+real	0m36.358s
+user	0m19.015s
+sys	0m4.684s

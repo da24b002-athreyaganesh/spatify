@@ -1,0 +1,46 @@
+{
+  "machine_cpus": 20,
+  "ray_cpus": 20,
+  "ray_startup_seconds": 0.75,
+  "runs": [
+    {
+      "copies": 1,
+      "rows": 79970,
+      "ray": {
+        "seconds": 5.44,
+        "rows_per_s": 14702
+      },
+      "pandas": {
+        "seconds": 1.41,
+        "rows_per_s": 56821
+      },
+      "ray_speedup": 0.26
+    },
+    {
+      "copies": 10,
+      "rows": 799700,
+      "ray": {
+        "seconds": 9.74,
+        "rows_per_s": 82083
+      },
+      "pandas": {
+        "seconds": 7.67,
+        "rows_per_s": 104254
+      },
+      "ray_speedup": 0.79
+    },
+    {
+      "copies": 20,
+      "rows": 1599400,
+      "ray": {
+        "seconds": 11.93,
+        "rows_per_s": 134076
+      },
+      "pandas": {
+        "seconds": 13.92,
+        "rows_per_s": 114928
+      },
+      "ray_speedup": 1.17
+    }
+  ]
+}

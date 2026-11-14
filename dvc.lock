@@ -38,3 +38,180 @@ stages:
       md5: e07b7e69c4b6bfb5a2e40466a4cb4a1c.dir
       size: 2416951
       nfiles: 8
+  ingest:
+    cmd: python -m spatify.pipeline.ingest
+    deps:
+    - path: data/base
+      hash: md5
+      md5: 95d11fe1b300d0426ae39da25f65506d.dir
+      size: 13673035
+      nfiles: 1
+    - path: data/incoming
+      hash: md5
+      md5: 6ffbaaad7b4ac6e1afabed19a80b2560.dir
+      size: 0
+      nfiles: 1
+    - path: src/spatify/pipeline/common.py
+      hash: md5
+      md5: 6abe8266736ed8b09c88be19abb0463a
+      size: 2165
+    - path: src/spatify/pipeline/ingest.py
+      hash: md5
+      md5: 78dbb64c98e84f5647b1b05409a3b800
+      size: 2743
+    - path: src/spatify/schema.py
+      hash: md5
+      md5: 18aa155dde61ba6c67686cc2e07f0b81
+      size: 1210
+    outs:
+    - path: data/ingested
+      hash: md5
+      md5: 8521d4335dcc81956200b42f1fc482fd.dir
+      size: 8686187
+      nfiles: 40
+    - path: metrics/ingest.json
+      hash: md5
+      md5: 093d9491cbaec60e708cf7a42551f9a0
+      size: 79
+  validate:
+    cmd: python -m spatify.pipeline.validate
+    deps:
+    - path: data/ingested
+      hash: md5
+      md5: 8521d4335dcc81956200b42f1fc482fd.dir
+      size: 8686187
+      nfiles: 40
+    - path: src/spatify/pipeline/common.py
+      hash: md5
+      md5: 6abe8266736ed8b09c88be19abb0463a
+      size: 2165
+    - path: src/spatify/pipeline/validate.py
+      hash: md5
+      md5: 9a7af4d16b2717c43474804c25381913
+      size: 7014
+    - path: src/spatify/schema.py
+      hash: md5
+      md5: 18aa155dde61ba6c67686cc2e07f0b81
+      size: 1210
+    params:
+      params.yaml:
+        validate:
+          max_reject_rate: 0.05
+          ranges:
+            popularity:
+            - 0
+            - 100
+            duration_ms:
+            - 1000
+            - 7200000
+            danceability:
+            - 0
+            - 1
+            energy:
+            - 0
+            - 1
+            key:
+            - -1
+            - 11
+            loudness:
+            - -60
+            - 5
+            mode:
+            - 0
+            - 1
+            speechiness:
+            - 0
+            - 1
+            acousticness:
+            - 0
+            - 1
+            instrumentalness:
+            - 0
+            - 1
+            liveness:
+            - 0
+            - 1
+            valence:
+            - 0
+            - 1
+            tempo:
+            - 0
+            - 250
+            time_signature:
+            - 0
+            - 7
+    outs:
+    - path: data/validated
+      hash: md5
+      md5: bc88a53c708a7e951e3ecb7e2184487b.dir
+      size: 9537450
+      nfiles: 35
+    - path: metrics/validate.json
+      hash: md5
+      md5: d2824f3446ba2a8eb4b6e97c02bf6afd
+      size: 381
+  features:
+    cmd: python -m spatify.pipeline.features
+    deps:
+    - path: data/validated
+      hash: md5
+      md5: bc88a53c708a7e951e3ecb7e2184487b.dir
+      size: 9537450
+      nfiles: 35
+    - path: src/spatify/pipeline/common.py
+      hash: md5
+      md5: 6abe8266736ed8b09c88be19abb0463a
+      size: 2165
+    - path: src/spatify/pipeline/features.py
+      hash: md5
+      md5: 0c9dc2cd5fc096d61c23ed20c4d00d09
+      size: 5893
+    - path: src/spatify/schema.py
+      hash: md5
+      md5: 18aa155dde61ba6c67686cc2e07f0b81
+      size: 1210
+    params:
+      params.yaml:
+        features:
+          columns:
+          - danceability
+          - energy
+          - loudness
+          - speechiness
+          - acousticness
+          - instrumentalness
+          - liveness
+          - valence
+          - tempo
+          - mode
+          - key_sin
+          - key_cos
+          reference_rows: 10000
+          seed: 42
+    outs:
+    - path: data/features
+      hash: md5
+      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
+      size: 12260890
+      nfiles: 22
+    - path: metrics/features.json
+      hash: md5
+      md5: caffe41fbd401598ad9997f3cc34b262
+      size: 142
+  eda:
+    cmd: python scripts/eda.py
+    deps:
+    - path: data/raw/spotify_tracks.csv
+      hash: md5
+      md5: e50a70711e823b75c8ebe231468f5faf
+      size: 20118244
+    - path: scripts/eda.py
+      hash: md5
+      md5: ef537d7c5eb58f2bf1a1d7ef38c76ce5
+      size: 7737
+    outs:
+    - path: reports/eda
+      hash: md5
+      md5: 264eb2f53a2223ec57243da504c4bab3.dir
+      size: 259360
+      nfiles: 5

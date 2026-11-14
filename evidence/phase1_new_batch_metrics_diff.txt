@@ -1,0 +1,30 @@
+Metrics before and after adding data/batches/normal_01.csv to data/incoming/ (2026-11-14).
+Same layout as 'dvc metrics diff'; seconds and rows/s vary from run to run.
+
+Path                   Metric                                 Base set only  With normal_01.csv  Change
+metrics/features.json  multi_genre_tracks                     10779          10839               60
+metrics/features.json  rows                                   79970          81930               1960
+metrics/features.json  rows_per_s                             10518.8        9909.0              -609.8
+metrics/features.json  seconds                                7.603          8.268               0.665
+metrics/features.json  tracks                                 63866          65761               1895
+metrics/ingest.json    files                                  1              2                   1
+metrics/ingest.json    rows                                   79970          81970               2000
+metrics/ingest.json    rows_per_s                             20807.6        24645.0             3837.4
+metrics/ingest.json    seconds                                3.843          3.326               -0.517
+metrics/validate.json  reject_rate                            0.0            0.0005              0.0005
+metrics/validate.json  reject_rate_by_source.normal_01.csv    -              0.02                -
+metrics/validate.json  rejected                               0              40                  40
+metrics/validate.json  rejected_by_reason.null:danceability   -              5                   -
+metrics/validate.json  rejected_by_reason.null:energy         -              5                   -
+metrics/validate.json  rejected_by_reason.null:tempo          -              5                   -
+metrics/validate.json  rejected_by_reason.null:track_id       -              5                   -
+metrics/validate.json  rejected_by_reason.range:danceability  -              5                   -
+metrics/validate.json  rejected_by_reason.range:energy        -              5                   -
+metrics/validate.json  rejected_by_reason.range:tempo         -              5                   -
+metrics/validate.json  rejected_by_reason.range:valence       -              5                   -
+metrics/validate.json  rejected_by_source.normal_01.csv       -              40                  -
+metrics/validate.json  rows                                   79970          81970               2000
+metrics/validate.json  rows_per_s                             11886.0        14242.3             2356.3
+metrics/validate.json  seconds                                6.728          5.755               -0.973
+metrics/validate.json  valid                                  79970          81930               1960
+metrics/validate.json  warnings.zero:tempo                    119            124                 5

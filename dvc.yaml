@@ -10,3 +10,52 @@ stages:
     outs:
     - data/base
     - data/batches
+  ingest:
+    cmd: python -m spatify.pipeline.ingest
+    deps:
+    - data/base
+    - data/incoming
+    - src/spatify/pipeline/common.py
+    - src/spatify/pipeline/ingest.py
+    - src/spatify/schema.py
+    outs:
+    - data/ingested
+    metrics:
+    - metrics/ingest.json:
+        cache: false
+  validate:
+    cmd: python -m spatify.pipeline.validate
+    deps:
+    - data/ingested
+    - src/spatify/pipeline/common.py
+    - src/spatify/pipeline/validate.py
+    - src/spatify/schema.py
+    params:
+    - validate
+    outs:
+    - data/validated
+    metrics:
+    - metrics/validate.json:
+        cache: false
+  features:
+    cmd: python -m spatify.pipeline.features
+    deps:
+    - data/validated
+    - src/spatify/pipeline/common.py
+    - src/spatify/pipeline/features.py
+    - src/spatify/schema.py
+    params:
+    - features
+    outs:
+    - data/features
+    metrics:
+    - metrics/features.json:
+        cache: false
+  eda:
+    cmd: python scripts/eda.py
+    deps:
+    - data/raw/spotify_tracks.csv
+    - scripts/eda.py
+    outs:
+    - reports/eda:
+        cache: false

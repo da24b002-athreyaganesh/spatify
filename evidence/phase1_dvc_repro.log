@@ -1,0 +1,28 @@
+2026-11-14T15:28:17+05:30
+'data/raw/spotify_tracks.csv.dvc' didn't change, skipping
+Stage 'make_batches' didn't change, skipping
+'data/incoming.dvc' didn't change, skipping
+Running stage 'ingest':
+> python -m spatify.pipeline.ingest
+2026-11-14 15:28:18,854 INFO __main__: Ingesting 1 files: tracks.csv
+2026-11-14 15:28:23,696	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+2026-11-14 15:28:27,409 INFO __main__: Ingested 79970 rows in 3.8 s (20808 rows/s)
+Updating lock file 'dvc.lock'
+Running stage 'validate':
+> python -m spatify.pipeline.validate
+2026-11-14 15:28:33,092	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+2026-11-14 15:28:39,690 INFO __main__: 79970 rows: 79970 valid, 0 rejected (0.00%) in 6.7 s (11886 rows/s)
+Updating lock file 'dvc.lock'
+Running stage 'features':
+> python -m spatify.pipeline.features
+2026-11-14 15:28:45,264	WARNING __init__.py:28 -- Progress bars disabled. To enable, set `ray.data.DataContext.get_current().enable_progress_bars = True`.
+2026-11-14 15:28:52,740 INFO __main__: 79970 rows -> 63866 tracks (10779 in several genres) in 7.6 s (10519 rows/s)
+Updating lock file 'dvc.lock'
+Running stage 'eda':
+> python scripts/eda.py
+Wrote reports/eda/eda.md and 4 figures
+Updating lock file 'dvc.lock'
+Use `dvc push` to send your updates to remote storage.
+real	0m39.692s
+user	0m23.691s
+sys	0m5.207s

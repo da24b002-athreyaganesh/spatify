@@ -1,0 +1,34 @@
+{
+  "rows": 81970,
+  "valid": 81539,
+  "rejected": 431,
+  "reject_rate": 0.0053,
+  "max_reject_rate": 0.05,
+  "failed_sources": [
+    "bad_batch.csv"
+  ],
+  "rejected_by_source": {
+    "bad_batch.csv": 431,
+    "tracks.csv": 0
+  },
+  "reject_rate_by_source": {
+    "bad_batch.csv": 0.2155,
+    "tracks.csv": 0.0
+  },
+  "rejected_by_reason": {
+    "null:danceability": 55,
+    "null:energy": 54,
+    "null:tempo": 53,
+    "null:track_id": 55,
+    "range:danceability": 54,
+    "range:energy": 55,
+    "range:tempo": 52,
+    "range:valence": 53
+  },
+  "warnings": {
+    "zero:tempo": 120,
+    "zero:time_signature": 6
+  },
+  "seconds": 5.21,
+  "rows_per_s": 15733.8
+}
