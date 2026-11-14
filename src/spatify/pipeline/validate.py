@@ -34,6 +34,7 @@ from spatify.pipeline.common import (
     setup_logging,
     throughput,
     write_metrics,
+    write_parquet,
 )
 from spatify.schema import COLUMNS, METADATA, NUMERIC, REQUIRED
 
@@ -141,7 +142,7 @@ def main(argv: list[str] | None = None) -> None:
 
     checked, valid, rejected = split(ds, cfg["ranges"])
     fresh_dir(args.out)
-    valid.write_parquet(str((args.out / "tracks").resolve()))
+    write_parquet(valid, args.out / "tracks")
     rejected.to_pandas().to_csv(args.out / "rejected.csv", index=False)
     summary = report(summarise(checked), cfg["max_reject_rate"])
     seconds = time.perf_counter() - start

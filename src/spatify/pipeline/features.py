@@ -35,6 +35,7 @@ from spatify.pipeline.common import (
     setup_logging,
     throughput,
     write_metrics,
+    write_parquet,
 )
 from spatify.schema import INTEGER
 
@@ -80,7 +81,12 @@ def build(ds: rd.Dataset, columns: list[str]) -> tuple[rd.Dataset, dict]:
         .materialize()
     )
     scaler = StandardScaler(columns=columns, output_columns=[f"z_{c}" for c in columns])
-    scaled = scaler.fit_transform(tracks).materialize()
+    scaler.fit(tracks)
+    # Ray adds up the partial sums in whatever order its tasks finish, so the last digits
+    # of the means and standard deviations change from run to run. Rounding them to 12
+    # significant digits makes identical data give byte-identical output (D31).
+    scaler.stats_ = {key: float(f"{value:.12g}") for key, value in scaler.stats_.items()}
+    scaled = scaler.transform(tracks).materialize()
     stats = {
         "columns": columns,
         "mean": {c: float(scaler.stats_[f"mean({c})"]) for c in columns},
@@ -115,7 +121,7 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(1)
 
     fresh_dir(args.out)
-    tracks.write_parquet(str((args.out / "tracks").resolve()))
+    write_parquet(tracks, args.out / "tracks")
     (args.out / "scaler.json").write_text(json.dumps(stats, indent=2) + "\n")
     reference = reference_sample(tracks, cfg["columns"], cfg["reference_rows"], cfg["seed"])
     reference.to_parquet(args.out / "reference.parquet", index=False)

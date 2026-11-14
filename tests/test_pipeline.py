@@ -1,5 +1,6 @@
 """End-to-end test of the three Ray stages on a small generated catalogue."""
 
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -98,3 +99,29 @@ def test_a_bad_batch_stops_the_pipeline(ray_local, tmp_path, monkeypatch):
         validate.main([])
     rejected = pd.read_csv("data/validated/rejected.csv")
     assert len(rejected) == 10  # the evidence is still written for the operator
+
+
+def manifest(folder: Path) -> dict[str, str]:
+    """Every file under a folder with its MD5: what DVC hashes a folder from."""
+    return {
+        str(p.relative_to(folder)): hashlib.md5(p.read_bytes()).hexdigest()
+        for p in sorted(folder.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_rerunning_on_the_same_data_gives_identical_files(ray_local, tmp_path, monkeypatch):
+    # D31: same input, same file names and bytes, so DVC sees the same hash and
+    # doesn't retrain on a rerun that changed nothing.
+    make_workspace(tmp_path, corrupt_fraction=0.025)
+    monkeypatch.chdir(tmp_path)
+    outputs = []
+    for run in ("a", "b"):
+        ingest.main(["--base", "data/base.csv", "--out", f"{run}/ingested"])
+        validate.main(["--data", f"{run}/ingested", "--out", f"{run}/validated"])
+        features.main(["--data", f"{run}/validated/tracks", "--out", f"{run}/features"])
+        outputs.append(
+            {stage: manifest(Path(run) / stage) for stage in ("ingested", "validated", "features")}
+        )
+    assert outputs[0] == outputs[1]
+    assert all(name.startswith("part-") for name in outputs[0]["ingested"])  # no random IDs

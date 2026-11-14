@@ -1,6 +1,6 @@
 {
   "model_name": "spatify",
-  "version": 3,
+  "version": 4,
   "variant": "all-fisher",
   "promoted": false,
   "challenger_score": 0.1348,

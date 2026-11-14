@@ -19,7 +19,14 @@ import pyarrow as pa
 import ray.data as rd
 from pyarrow import csv as pacsv
 
-from spatify.pipeline.common import fresh_dir, init_ray, setup_logging, throughput, write_metrics
+from spatify.pipeline.common import (
+    fresh_dir,
+    init_ray,
+    setup_logging,
+    throughput,
+    write_metrics,
+    write_parquet,
+)
 from spatify.schema import COLUMNS
 
 log = logging.getLogger(__name__)
@@ -62,7 +69,7 @@ def main(argv: list[str] | None = None) -> None:
 
     start = time.perf_counter()
     ds = read_tracks(paths).materialize()
-    ds.write_parquet(str(fresh_dir(args.out).resolve()))
+    write_parquet(ds, fresh_dir(args.out))
     seconds = time.perf_counter() - start
 
     metrics = {"files": len(paths), **throughput(ds.count(), seconds)}

@@ -164,3 +164,13 @@ One entry per design decision: what was chosen, why, and what else was considere
   - The features stage took 5.3 s on 4 CPUs against 7.6 s on 20. It produced the same tracks and drift reference, with scaled values within 2e-15.
 - **The benchmark:** the numbers in D14 were measured on 20 CPUs, up to 20 copies. Capped at 4 CPUs and run at 10 copies, it raised used memory by at most 2.4 GB, and Ray reached 65,674 rows/s against pandas' 94,504 (0.69×): Ray's advantage needs both cores and data.
 - **Considered:** tuning Postgres (it uses 13 MB of program memory, so there was nothing to gain); running uvicorn directly instead of `mlflow models serve`, which would save about 240 MB but depend on MLflow's internals.
+
+## D31. Rerunning on the same data gives the same DVC hash
+- **Problem:** DVC hashes a folder from its file names and their contents. Ray named every Parquet file after a random ID chosen per write, so each rerun produced new names. Ray also adds up the scaler's partial sums in whatever order its tasks finish, so the last digits of the means and standard deviations varied too. Identical data therefore got a new hash every run. That changed every model's `dataset_version` tag and made DVC retrain after a rerun that changed nothing; the reproducibility drill showed it.
+- **Fix:** the Ray stages write through `write_parquet` in `src/spatify/pipeline/common.py`. It names files by position (`part-00003-0.parquet`) and writes in OVERWRITE mode, since Ray insists on the random ID only when appending to a folder, and the stages always write into a folder they have just emptied. The features stage also rounds the fitted scaler statistics to 12 significant digits before transforming, an error of at most 1e-12 relative.
+- **Measured** (`evidence/phase1_deterministic_outputs.log`):
+  - Two runs of ingest, validate and features on the same data gave byte-identical files (13, 14 and 6 of them).
+  - After a forced rerun of those stages, the hashes in `dvc.lock` were unchanged, and `dvc repro` then skipped train, evaluate and register.
+  - `tests/test_pipeline.py` checks the same thing on a small catalogue.
+- **Limit:** file boundaries follow Ray's blocks, and the number of blocks depends on the CPU cap (the features stage uses one block per CPU, D30). So a run with a different `SPATIFY_RAY_CPUS` gets a different hash for the same data; reruns with the same settings get the same one.
+- **Considered:** writing one file per stage (`repartition(1)`). That would make the hash independent of the CPU count, but it funnels all the data through a single task, against the point of a Ray pipeline.

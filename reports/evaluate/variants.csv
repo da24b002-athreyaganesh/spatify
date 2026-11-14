@@ -1,7 +1,7 @@
 variant,feature_set,weighting,genre_match_at_k,genre_match_at_1,mean_score_at_k,coverage_at_k,ms_per_query
-all-fisher,all,fisher,0.1348,0.1775,0.9583,0.2595,0.375
-no_tonal-uniform,no_tonal,uniform,0.1347,0.172,0.968,0.2611,0.424
-no_tonal-fisher,no_tonal,fisher,0.1319,0.181,0.9718,0.2611,0.384
-all-uniform,all,uniform,0.1282,0.169,0.9471,0.2616,0.373
-no_loudness-fisher,no_loudness,fisher,0.1233,0.148,0.9654,0.2606,0.374
-no_loudness-uniform,no_loudness,uniform,0.1182,0.1505,0.9545,0.262,0.415
+all-fisher,all,fisher,0.1348,0.1775,0.9583,0.2595,0.372
+no_tonal-uniform,no_tonal,uniform,0.1347,0.172,0.968,0.2611,0.365
+no_tonal-fisher,no_tonal,fisher,0.1319,0.181,0.9718,0.2611,0.358
+all-uniform,all,uniform,0.1282,0.169,0.9471,0.2616,0.383
+no_loudness-fisher,no_loudness,fisher,0.1233,0.148,0.9654,0.2606,0.346
+no_loudness-uniform,no_loudness,uniform,0.1182,0.1505,0.9545,0.262,0.368

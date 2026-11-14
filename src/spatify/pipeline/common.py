@@ -1,4 +1,4 @@
-"""Helpers shared by the pipeline stages: params, logging, Ray start-up and metrics."""
+"""Helpers shared by the pipeline stages: params, logging, Ray start-up, output and metrics."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ import shutil
 from pathlib import Path
 
 import ray
+import ray.data as rd
 import yaml
-from ray.data import DataContext
+from ray.data import DataContext, SaveMode
+from ray.data.datasource import FilenameProvider
 
 
 def load_params(section: str, path: Path = Path("params.yaml")) -> dict:
@@ -65,6 +67,30 @@ def fresh_dir(path: Path) -> Path:
     shutil.rmtree(path, ignore_errors=True)
     path.mkdir(parents=True)
     return path
+
+
+class PositionalNames(FilenameProvider):
+    """Name each write task's output by its position: `part-00003` (Ray adds `-0.parquet`).
+
+    Ray's default names start with a random ID per write, so writing identical data twice
+    gives different file names, and DVC (which hashes a folder's file names as well as
+    their contents) records a new hash every run (D31).
+    """
+
+    def get_filename_for_task(self, write_uuid: str, task_index: int) -> str:
+        return f"part-{task_index:05d}"
+
+
+def write_parquet(ds: rd.Dataset, path: Path) -> None:
+    """Write a dataset as Parquet files with positional names.
+
+    OVERWRITE mode: the stages always write into a folder they've just emptied, and Ray
+    insists on the random write ID in file names only in its default APPEND mode. The
+    path is made absolute because Ray's workers don't share the driver's working directory.
+    """
+    ds.write_parquet(
+        str(path.resolve()), filename_provider=PositionalNames(), mode=SaveMode.OVERWRITE
+    )
 
 
 def write_metrics(path: Path, metrics: dict) -> None:
