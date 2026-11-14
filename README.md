@@ -31,6 +31,7 @@ Needs Docker with Compose, Git LFS and uv.
 - Admin calls (rollback, pipeline trigger) need the `X-API-Key` header; the key is `SPATIFY_API_KEY` in `.env`.
 - `docker compose down` stops the stack; the database and the models stay in Docker volumes.
 - Without `MLFLOW_TRACKING_URI` the pipeline logs to a local `mlflow.db` instead of the stack.
+- Memory: the stack uses about 1.2 GB, and each service has a hard limit (D30). The Ray stages use 4 CPUs and a 1 GB object store; on a bigger machine raise `SPATIFY_RAY_CPUS` and `SPATIFY_RAY_OBJECT_STORE_MB`. `python scripts/peak_memory.py -- <command>` reports a command's peak memory and stops it if the machine runs low.
 
 ## Layout
 

@@ -151,3 +151,16 @@ One entry per design decision: what was chosen, why, and what else was considere
 
 ## D29. Pipeline triggers go into a queue table in Postgres
 - **How:** `POST /pipeline/trigger` inserts a `requested` row in `pipeline_runs`. The worker (Phase 5) claims requested rows, runs the pipeline and fills in status, stages, durations and the model version. The gateway and the worker share Postgres rather than calling each other over HTTP, so a trigger survives a worker restart, and the run history the console shows comes from the same table.
+
+## D30. A memory budget for a 16 GB laptop
+- **Why:** the laptop has 15 GB, and a browser and VS Code take about 6 GB of it. With the Compose stack at about 2.4 GB and an uncapped Ray pipeline on top, the machine was deep in swap (2.7 of 4 GB in use) and at risk of freezing.
+- **MLflow server:** `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false` turns off MLflow 3's job runner, 7 background processes of about 150 MB each, which serve GenAI features (scorers, prompt optimisation, trace roll-ups) that Spatify doesn't use. It also runs one uvicorn worker instead of two.
+- **Model server:** one worker instead of two. Each worker holds its own copy of the model (about 280 MB), and one answers in a few milliseconds. The supervisor reads the alias with one REST call instead of importing the mlflow package, which took it from 160 MB to 27 MB.
+- **Hard limits:** every service has a memory limit with no swap: Postgres 256 MB, MLflow 768 MB, the model server 768 MB and the gateway 512 MB. Each is 1.5–2× the measured use, so a runaway service is killed and restarted by Compose instead of pushing the laptop into swap.
+- **Ray:** a local Ray instance is capped at 4 CPUs and a 1 GB object store (`SPATIFY_RAY_CPUS`, `SPATIFY_RAY_OBJECT_STORE_MB`). By default Ray starts a worker per CPU (20 here) and reserves 30% of RAM. It starts with `address="local"`, so a record of a dead cluster in `/tmp/ray` can't make a stage try to join it, which had happened after an interrupted `ray start --head`.
+- **Measured:**
+  - The stack went from about 2.4 GB to 1.17 GB (`docker stats`).
+  - The whole pipeline (`dvc repro`, every stage, with the stack running) raised used memory by at most 1.9 GB and left at least 4.5 GB available, in 56 s (`evidence/phase3_capped_pipeline_memory.log`). The results were unchanged: genre match@10 was 0.1348 again.
+  - The features stage took 5.3 s on 4 CPUs against 7.6 s on 20. It produced the same tracks and drift reference, with scaled values within 2e-15.
+- **The benchmark:** the numbers in D14 were measured on 20 CPUs, up to 20 copies. Capped at 4 CPUs and run at 10 copies, it raised used memory by at most 2.4 GB, and Ray reached 65,674 rows/s against pandas' 94,504 (0.69×): Ray's advantage needs both cores and data.
+- **Considered:** tuning Postgres (it uses 13 MB of program memory, so there was nothing to gain); running uvicorn directly instead of `mlflow models serve`, which would save about 240 MB but depend on MLflow's internals.

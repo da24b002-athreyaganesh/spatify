@@ -29,13 +29,30 @@ def init_ray() -> None:
 
     Joining a running cluster (`ray start --head`) keeps the Ray Dashboard up after
     the stage ends, which is what you want for screenshots.
+
+    A local instance is capped (D30): by default Ray starts one worker process per CPU
+    and reserves 30% of RAM for its object store, which on a 20-CPU laptop that is also
+    running a browser, an editor and the Compose stack can push the machine into swap.
+    SPATIFY_RAY_CPUS (default 4) and SPATIFY_RAY_OBJECT_STORE_MB (default 1024) set the
+    caps. Only the speed changes: the features stage on 4 CPUs gave the same tracks and
+    drift reference as on 20, and scaled values within 2e-15 (floating-point rounding).
     """
     if not ray.is_initialized():
         address = os.environ.get("RAY_ADDRESS")
         if address:
             ray.init(address=address, log_to_driver=False, logging_level="ERROR")
         else:
-            ray.init(include_dashboard=False, log_to_driver=False, logging_level="ERROR")
+            ray.init(
+                # "local": always a fresh, capped instance. Without it, ray.init() joins
+                # any cluster recorded in /tmp/ray/ray_current_cluster, even a dead one.
+                address="local",
+                num_cpus=int(os.environ.get("SPATIFY_RAY_CPUS", "4")),
+                object_store_memory=int(os.environ.get("SPATIFY_RAY_OBJECT_STORE_MB", "1024"))
+                * 1024**2,
+                include_dashboard=False,
+                log_to_driver=False,
+                logging_level="ERROR",
+            )
     logging.getLogger("ray.data").setLevel(logging.WARNING)  # hide per-dataset INFO lines
     ctx = DataContext.get_current()
     ctx.enable_progress_bars = False

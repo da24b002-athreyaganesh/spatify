@@ -16,7 +16,14 @@ PARAMS = Path("params.yaml").resolve()  # the real thresholds, read from the pro
 
 @pytest.fixture(scope="module")
 def ray_local():
-    ray.init(num_cpus=2, include_dashboard=False, log_to_driver=False)
+    # "local": a fresh instance even if /tmp/ray records another (possibly dead) cluster.
+    ray.init(
+        address="local",
+        num_cpus=2,
+        object_store_memory=256 * 1024**2,
+        include_dashboard=False,
+        log_to_driver=False,
+    )
     yield
     ray.shutdown()
 

@@ -13,6 +13,9 @@ before the new one starts, so the new one can't race the old one for the port (L
 Considered: `mlflow models build-docker`, which bakes one version into an image, so
 every promotion or rollback would need an image build and a redeploy.
 
+The supervisor reads the alias with one call to MLflow's REST API instead of importing
+the mlflow package, which would cost about 140 MB of memory for a single lookup (D30).
+
 Run (as the Compose service does):  python -m spatify.model_server
 Settings: MLFLOW_TRACKING_URI, MODEL_NAME (spatify), MODEL_ALIAS (champion),
           PORT (8080), WORKERS (1), POLL_SECONDS (10)
@@ -20,17 +23,46 @@ Settings: MLFLOW_TRACKING_URI, MODEL_NAME (spatify), MODEL_ALIAS (champion),
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import signal
 import subprocess
 import threading
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections.abc import Callable
 
-from mlflow import MlflowClient
-from mlflow.exceptions import MlflowException
-
 log = logging.getLogger("spatify.model_server")
+
+
+class RegistryUnavailableError(Exception):
+    """MLflow couldn't be asked, or answered with an unexpected error."""
+
+
+def alias_version(tracking_uri: str, name: str, alias: str, timeout: float = 10) -> str | None:
+    """The version an alias points to, from MLflow's REST API; None if there isn't one yet.
+
+    A missing model answers 404 RESOURCE_DOES_NOT_EXIST and a missing alias 400
+    INVALID_PARAMETER_VALUE "... not found"; both mean nothing to serve yet.
+    """
+    query = urllib.parse.urlencode({"name": name, "alias": alias})
+    url = f"{tracking_uri.rstrip('/')}/api/2.0/mlflow/registered-models/alias?{query}"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return str(json.load(response)["model_version"]["version"])
+    except urllib.error.HTTPError as err:
+        try:
+            body = json.load(err)
+        except ValueError:
+            body = {}
+        missing = body.get("error_code") in ("RESOURCE_DOES_NOT_EXIST", "INVALID_PARAMETER_VALUE")
+        if missing and "not found" in body.get("message", ""):
+            return None
+        raise RegistryUnavailableError(f"MLflow answered HTTP {err.code}: {body}") from err
+    except (urllib.error.URLError, OSError, ValueError, KeyError) as err:
+        raise RegistryUnavailableError(f"couldn't read the alias from MLflow: {err}") from err
 
 
 def launch_server(name: str, version: str, port: int, workers: int) -> subprocess.Popen:
@@ -61,8 +93,8 @@ class Supervisor:
         """One check: (re)start the server if the alias moved or the server died."""
         try:
             wanted = self.resolve()
-        except MlflowException:
-            log.warning("Registry unreachable; keeping version %s", self.version, exc_info=True)
+        except RegistryUnavailableError as err:
+            log.warning("Registry unreachable (%s); keeping version %s", err, self.version)
             return
         if wanted is None:
             log.info("No version has the alias yet; waiting for the pipeline to promote one")
@@ -99,20 +131,12 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8080"))
     workers = int(os.environ.get("WORKERS", "1"))
     poll = float(os.environ.get("POLL_SECONDS", "10"))
-    client = MlflowClient()  # MLFLOW_TRACKING_URI from the environment
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 
-    def resolve() -> str | None:
-        try:
-            return str(client.get_model_version_by_alias(name, alias).version)
-        except MlflowException as err:
-            # No such model (RESOURCE_DOES_NOT_EXIST) or no such alias yet
-            # (INVALID_PARAMETER_VALUE, "... not found"): nothing to serve yet.
-            missing = err.error_code in ("RESOURCE_DOES_NOT_EXIST", "INVALID_PARAMETER_VALUE")
-            if missing and "not found" in str(err):
-                return None
-            raise
-
-    supervisor = Supervisor(resolve, lambda v: launch_server(name, v, port, workers))
+    supervisor = Supervisor(
+        lambda: alias_version(tracking_uri, name, alias),
+        lambda v: launch_server(name, v, port, workers),
+    )
     done = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: done.set())

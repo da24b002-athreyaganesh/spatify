@@ -1,48 +1,48 @@
 {
   "experiment_id": "1",
-  "train_run_id": "33ded1617a1447c29f53582c836f039e",
+  "train_run_id": "ecdf66cc9e404c4a8af24bd92ca73755",
   "candidates": [
     {
       "variant": "all-uniform",
       "feature_set": "all",
       "weighting": "uniform",
-      "run_id": "0a34b2e8cce64191a6a854a24ed17f36",
-      "model_uri": "models:/m-07c6da6b223243b58d5f9f4871ed8271"
+      "run_id": "562c6d837fbc49de92e56ad83e1244e0",
+      "model_uri": "models:/m-a1b2eb5587d047be92fd5d7e5d4ef998"
     },
     {
       "variant": "all-fisher",
       "feature_set": "all",
       "weighting": "fisher",
-      "run_id": "eab2c763d4a740948ec8b3b3109fe247",
-      "model_uri": "models:/m-1e9791ed99d6488fa3bb33e611be331e"
+      "run_id": "19ddff252b72466cb821c54adeb34e29",
+      "model_uri": "models:/m-afaa44a5af6642469f3382739bc11dd1"
     },
     {
       "variant": "no_tonal-uniform",
       "feature_set": "no_tonal",
       "weighting": "uniform",
-      "run_id": "c56205ccfe304b70aabbf37aa2eada1d",
-      "model_uri": "models:/m-d158f4510147433391361ba87c3cf433"
+      "run_id": "073be8f139ff470db7fd0e52080711bf",
+      "model_uri": "models:/m-87f87313003845ecb7255362c800d573"
     },
     {
       "variant": "no_tonal-fisher",
       "feature_set": "no_tonal",
       "weighting": "fisher",
-      "run_id": "e99b7df70b1a428689003a6460f1db21",
-      "model_uri": "models:/m-0acf8994db4b420088b8e1f542663dfd"
+      "run_id": "52bfc54f03374f58bf743f4fbd44f39c",
+      "model_uri": "models:/m-b50aeeaabbe346bc8fe5025c9766a76f"
     },
     {
       "variant": "no_loudness-uniform",
       "feature_set": "no_loudness",
       "weighting": "uniform",
-      "run_id": "5d41814a777f437bb4f015359f4dc8c8",
-      "model_uri": "models:/m-b3e3865dc565440a98ba119332acb9e6"
+      "run_id": "7fa1cc91a1ad4d0098beb472f5577c62",
+      "model_uri": "models:/m-9340c1d814c84334babe6a23bc870203"
     },
     {
       "variant": "no_loudness-fisher",
       "feature_set": "no_loudness",
       "weighting": "fisher",
-      "run_id": "25f1be21e77940b1ab8b05b933e2268f",
-      "model_uri": "models:/m-b513632e7a054512a1bd40fb769e0245"
+      "run_id": "c5a6d28f08eb49b393706a8b20af4280",
+      "model_uri": "models:/m-c3b995b054574a46a55dd990de0e8a47"
     }
   ]
 }

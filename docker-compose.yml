@@ -8,6 +8,10 @@
 # Services find each other by service name on the Compose network; only the gateway
 # (8000) and the MLflow UI (5000) are published, and only on localhost.
 # Phase 4 adds the frontend, Phase 5 the worker, Phase 6 Prometheus and Grafana.
+#
+# Memory (D30): every service has a hard limit with no swap, so a runaway service is
+# stopped and restarted instead of pushing the laptop into swap. The whole stack fits
+# in about 1 GB; `docker stats` shows each service's use against its limit.
 
 name: spatify
 
@@ -20,6 +24,8 @@ services:
   postgres:
     image: postgres:17.12-alpine
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -38,12 +44,18 @@ services:
       dockerfile: services/mlflow/Dockerfile
     image: spatify/mlflow:latest
     restart: unless-stopped
+    mem_limit: 768m
+    memswap_limit: 768m
+    environment:
+      # MLflow 3's job runner starts 7 background processes (~150 MB each) for GenAI
+      # features (scorers, prompt optimisation, trace roll-ups) that Spatify doesn't use.
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
     command:
       - mlflow
       - server
       - --host=0.0.0.0
       - --port=5000
-      - --workers=2
+      - --workers=1
       - --backend-store-uri=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
       - --serve-artifacts
       - --artifacts-destination=/mlflow/artifacts
@@ -68,12 +80,15 @@ services:
       dockerfile: services/model_server/Dockerfile
     image: spatify/model-server:latest
     restart: unless-stopped
+    mem_limit: 768m
+    memswap_limit: 768m
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       MODEL_NAME: spatify
       MODEL_ALIAS: champion
       PORT: "8080"
-      WORKERS: "2"
+      # Each worker holds its own copy of the model (~280 MB); one answers in a few ms.
+      WORKERS: "1"
       POLL_SECONDS: "10"
     expose:
       - "8080"
@@ -92,6 +107,8 @@ services:
       dockerfile: services/gateway/Dockerfile
     image: spatify/gateway:latest
     restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
     environment:
       MODEL_SERVER_URL: http://model-server:8080
       MLFLOW_TRACKING_URI: http://mlflow:5000

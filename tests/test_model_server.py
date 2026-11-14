@@ -1,8 +1,73 @@
 """The model-server supervisor follows the champion alias (no real MLflow or processes)."""
 
-from mlflow.exceptions import MlflowException
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
 
-from spatify.model_server import Supervisor
+import pytest
+
+from spatify.model_server import RegistryUnavailableError, Supervisor, alias_version
+
+# What MLflow's REST API answers for an alias lookup (checked against the running server).
+ANSWERS = {
+    ("spatify", "champion"): (200, {"model_version": {"version": "3"}}),
+    ("spatify", "nope"): (
+        400,
+        {
+            "error_code": "INVALID_PARAMETER_VALUE",
+            "message": "Registered model alias nope not found.",
+        },
+    ),
+    ("missing", "champion"): (
+        404,
+        {
+            "error_code": "RESOURCE_DOES_NOT_EXIST",
+            "message": "Registered Model with name=missing not found",
+        },
+    ),
+    ("broken", "champion"): (500, {"error_code": "INTERNAL_ERROR", "message": "database is down"}),
+}
+
+
+@pytest.fixture(scope="module")
+def mlflow_api():
+    """A tiny HTTP server answering /api/2.0/mlflow/registered-models/alias like MLflow."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            query = parse_qs(urlparse(self.path).query)
+            status, body = ANSWERS[(query["name"][0], query["alias"][0])]
+            payload = json.dumps(body).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{server.server_port}"
+    server.shutdown()
+
+
+def test_alias_lookup_reads_the_version(mlflow_api):
+    assert alias_version(mlflow_api, "spatify", "champion") == "3"
+
+
+def test_no_alias_or_no_model_means_nothing_to_serve_yet(mlflow_api):
+    assert alias_version(mlflow_api, "spatify", "nope") is None
+    assert alias_version(mlflow_api, "missing", "champion") is None
+
+
+def test_registry_errors_are_reported_not_mistaken_for_no_champion(mlflow_api):
+    with pytest.raises(RegistryUnavailableError):
+        alias_version(mlflow_api, "broken", "champion")
+    with pytest.raises(RegistryUnavailableError):
+        alias_version("http://127.0.0.1:9", "spatify", "champion", timeout=2)  # nothing listening
 
 
 class FakeProcess:
@@ -72,6 +137,6 @@ def test_keeps_serving_while_the_registry_is_down():
     alias = {"v": "1"}
     supervisor, launched = make(alias)
     supervisor.step()
-    alias["v"] = MlflowException("connection refused")
+    alias["v"] = RegistryUnavailableError("connection refused")
     supervisor.step()
     assert len(launched) == 1 and launched[0].code is None

@@ -53,8 +53,8 @@ stages:
       nfiles: 1
     - path: src/spatify/pipeline/common.py
       hash: md5
-      md5: 6abe8266736ed8b09c88be19abb0463a
-      size: 2165
+      md5: 6d56691d2e07ec003eac1fc217e14abf
+      size: 3159
     - path: src/spatify/pipeline/ingest.py
       hash: md5
       md5: 78dbb64c98e84f5647b1b05409a3b800
@@ -66,25 +66,25 @@ stages:
     outs:
     - path: data/ingested
       hash: md5
-      md5: 8521d4335dcc81956200b42f1fc482fd.dir
-      size: 8686187
-      nfiles: 40
+      md5: 0a290ae1a2b2498df872f2e2297b9ae6.dir
+      size: 7626411
+      nfiles: 13
     - path: metrics/ingest.json
       hash: md5
-      md5: 093d9491cbaec60e708cf7a42551f9a0
+      md5: 6b336c9ac563cae848443d3655d820f0
       size: 79
   validate:
     cmd: python -m spatify.pipeline.validate
     deps:
     - path: data/ingested
       hash: md5
-      md5: 8521d4335dcc81956200b42f1fc482fd.dir
-      size: 8686187
-      nfiles: 40
+      md5: 0a290ae1a2b2498df872f2e2297b9ae6.dir
+      size: 7626411
+      nfiles: 13
     - path: src/spatify/pipeline/common.py
       hash: md5
-      md5: 6abe8266736ed8b09c88be19abb0463a
-      size: 2165
+      md5: 6d56691d2e07ec003eac1fc217e14abf
+      size: 3159
     - path: src/spatify/pipeline/validate.py
       hash: md5
       md5: 9a7af4d16b2717c43474804c25381913
@@ -143,25 +143,25 @@ stages:
     outs:
     - path: data/validated
       hash: md5
-      md5: bc88a53c708a7e951e3ecb7e2184487b.dir
-      size: 9537450
-      nfiles: 35
+      md5: 5a4b4e76f5b6b9508cd2868fe7b17b3a.dir
+      size: 11651141
+      nfiles: 14
     - path: metrics/validate.json
       hash: md5
-      md5: d2824f3446ba2a8eb4b6e97c02bf6afd
+      md5: d24aad4338267ab98e9b57f7a75caaae
       size: 381
   features:
     cmd: python -m spatify.pipeline.features
     deps:
     - path: data/validated
       hash: md5
-      md5: bc88a53c708a7e951e3ecb7e2184487b.dir
-      size: 9537450
-      nfiles: 35
+      md5: 5a4b4e76f5b6b9508cd2868fe7b17b3a.dir
+      size: 11651141
+      nfiles: 14
     - path: src/spatify/pipeline/common.py
       hash: md5
-      md5: 6abe8266736ed8b09c88be19abb0463a
-      size: 2165
+      md5: 6d56691d2e07ec003eac1fc217e14abf
+      size: 3159
     - path: src/spatify/pipeline/features.py
       hash: md5
       md5: 0c9dc2cd5fc096d61c23ed20c4d00d09
@@ -191,12 +191,12 @@ stages:
     outs:
     - path: data/features
       hash: md5
-      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
-      size: 12260890
-      nfiles: 22
+      md5: 6b424bbe7cb227856aa5971132e0eb60.dir
+      size: 9765938
+      nfiles: 6
     - path: metrics/features.json
       hash: md5
-      md5: caffe41fbd401598ad9997f3cc34b262
+      md5: d924a2737e1a008bf68013f62f2f505d
       size: 142
   eda:
     cmd: python scripts/eda.py
@@ -241,9 +241,9 @@ stages:
       size: 648
     - path: data/features
       hash: md5
-      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
-      size: 12260890
-      nfiles: 22
+      md5: 6b424bbe7cb227856aa5971132e0eb60.dir
+      size: 9765938
+      nfiles: 6
     - path: python_env.yaml
       hash: md5
       md5: ccf4245d53748c4e1f7a2c278801e14d
@@ -306,7 +306,7 @@ stages:
     outs:
     - path: models/candidates.json
       hash: md5
-      md5: ab22c70be2854d7ea6b61fd4cfc5cc9c
+      md5: e2e449a5f9915692f880bb40b94d3646
       size: 1463
   evaluate:
     cmd: mlflow run . -e evaluate --env-manager=local --experiment-name spatify
@@ -314,12 +314,12 @@ stages:
     deps:
     - path: data/features
       hash: md5
-      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
-      size: 12260890
-      nfiles: 22
+      md5: 6b424bbe7cb227856aa5971132e0eb60.dir
+      size: 9765938
+      nfiles: 6
     - path: models/candidates.json
       hash: md5
-      md5: ab22c70be2854d7ea6b61fd4cfc5cc9c
+      md5: e2e449a5f9915692f880bb40b94d3646
       size: 1463
     - path: src/spatify/model/data.py
       hash: md5
@@ -345,11 +345,11 @@ stages:
     outs:
     - path: metrics/evaluate.json
       hash: md5
-      md5: 16ab9ed5bc4e1ee8d102f03b015bd3c8
+      md5: 0c2ed6df07a24dc7c271e32399e69682
       size: 1426
     - path: reports/evaluate/variants.csv
       hash: md5
-      md5: 46a70fe16b7e6f19a815a15064966b4b
+      md5: 9170953d595a667554f6b7a710687732
       size: 495
     - path: reports/evaluate/variants.png
       hash: md5
@@ -361,16 +361,16 @@ stages:
     deps:
     - path: data/features
       hash: md5
-      md5: 5a9be73bb0066c86aeedd117cfa22e50.dir
-      size: 12260890
-      nfiles: 22
+      md5: 6b424bbe7cb227856aa5971132e0eb60.dir
+      size: 9765938
+      nfiles: 6
     - path: metrics/evaluate.json
       hash: md5
-      md5: 16ab9ed5bc4e1ee8d102f03b015bd3c8
+      md5: 0c2ed6df07a24dc7c271e32399e69682
       size: 1426
     - path: models/candidates.json
       hash: md5
-      md5: ab22c70be2854d7ea6b61fd4cfc5cc9c
+      md5: e2e449a5f9915692f880bb40b94d3646
       size: 1463
     - path: src/spatify/model/data.py
       hash: md5
@@ -399,5 +399,5 @@ stages:
     outs:
     - path: metrics/register.json
       hash: md5
-      md5: 40ea1389b978203b9c69a1cc156bab52
-      size: 265
+      md5: 668b09ee42ad076974e003c408c10958
+      size: 262
