@@ -1,0 +1,10 @@
+# The build context is the repo root, but the images need only the package and the
+# lock file. Allow-list: everything else (data, .venv, .git, mlruns, ...) stays out.
+*
+!pyproject.toml
+!uv.lock
+!.python-version
+!README.md
+!src/
+**/__pycache__
+**/*.py[cod]

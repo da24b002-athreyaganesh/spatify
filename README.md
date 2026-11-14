@@ -11,8 +11,26 @@ Needs Docker with Compose, Git LFS and uv.
     git clone <repo-url> spatify && cd spatify
     uv sync --all-extras        # Python 3.12 environment from uv.lock
     uv run pre-commit install
+    export RAY_ENABLE_UV_RUN_RUNTIME_ENV=0   # Ray stages hang under `uv run` without it (D15)
     uv run dvc pull             # needs the DVC remote; without it, rebuild from the public source:
     uv run dvc update data/raw/spotify_tracks.csv.dvc && uv run dvc repro
+
+## Run the serving stack
+
+    uv run python scripts/make_env.py        # once: .env with random secrets
+    docker compose up -d --build             # postgres, mlflow, model-server, gateway
+
+    # First start only: train into the stack's MLflow, so there is a champion to serve.
+    export MLFLOW_TRACKING_URI=http://localhost:5000
+    uv run dvc repro --force --downstream train
+
+    uv run python scripts/smoke_test.py      # end-to-end check through the gateway
+
+- Gateway API, with interactive docs: http://localhost:8000/docs
+- MLflow UI (runs, model versions, aliases): http://localhost:5000
+- Admin calls (rollback, pipeline trigger) need the `X-API-Key` header; the key is `SPATIFY_API_KEY` in `.env`.
+- `docker compose down` stops the stack; the database and the models stay in Docker volumes.
+- Without `MLFLOW_TRACKING_URI` the pipeline logs to a local `mlflow.db` instead of the stack.
 
 ## Layout
 

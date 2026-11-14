@@ -1,0 +1,15 @@
+Rollback check, 2026-11-14T16:49:54: move the champion alias through the gateway and time how long until answers come from the new version.
+
+without the key: 401
+
+== Make version 2 the champion
+   before: /recommend answered by version 1
+   POST /models/rollback {'version': 2} -> 200 {'champion': 2, 'previous': 1, 'detail': "Version 2 is now the champion; the model server switches to it within a few seconds. Each response's model_version shows which one answered."}
+   answers from version 2 after 13.4 s; responses while switching: {200: 32, 503: 19}
+
+== Roll back to `previous` (version 1)
+   before: /recommend answered by version 2
+   POST /models/rollback  -> 200 {'champion': 1, 'previous': 2, 'detail': "Version 1 is now the champion; the model server switches to it within a few seconds. Each response's model_version shows which one answered."}
+   answers from version 1 after 9.5 s; responses while switching: {200: 18, 503: 19}
+
+Final aliases: champion 1, previous 2, challenger 2

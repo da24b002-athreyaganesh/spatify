@@ -3263,6 +3263,18 @@ wheels = [
 ]
 
 [[package]]
+name = "psycopg-pool"
+version = "3.3.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/5e/c0664b968b102ff68b811d999c728546c48d5c1eec03e3bbaf88c0cb4472/psycopg_pool-3.3.3.tar.gz", hash = "sha256:df87b5d9d0ad7db37f6cdad4fa8ce113d250f5997f6db38e9a99192fb67f9e1d", size = 32006, upload-time = "2026-09-22T15:53:24.947Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/b4/452c6607a0f479465cd8a9b0d9956919fcb150050c1f83f9f11e6b8ee8dc/psycopg_pool-3.3.3-py3-none-any.whl", hash = "sha256:9b9cd6a4fcec47a410f7e82d408540e7f77b478509e91b44c1a5457a13e5ff37", size = 40304, upload-time = "2026-09-22T15:53:23.712Z" },
+]
+
+[[package]]
 name = "py-spy"
 version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -4198,8 +4210,6 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pyyaml" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
 ]
 
 [package.optional-dependencies]
@@ -4208,17 +4218,25 @@ frontend = [
     { name = "prometheus-client" },
     { name = "streamlit" },
 ]
+mlflow-server = [
+    { name = "mlflow" },
+    { name = "psycopg", extra = ["binary"] },
+]
 pipeline = [
     { name = "dvc" },
     { name = "matplotlib" },
     { name = "mlflow" },
     { name = "ray", extra = ["data", "default"] },
+    { name = "scikit-learn" },
+    { name = "scipy" },
 ]
 serving = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "mlflow-skinny" },
     { name = "prometheus-client" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg-pool" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -4237,22 +4255,26 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'frontend'", specifier = ">=0.28.1" },
     { name = "httpx", marker = "extra == 'serving'", specifier = ">=0.28.1" },
     { name = "matplotlib", marker = "extra == 'pipeline'", specifier = ">=3.11.2" },
+    { name = "mlflow", marker = "extra == 'mlflow-server'", specifier = "==3.17.1" },
     { name = "mlflow", marker = "extra == 'pipeline'", specifier = "==3.17.1" },
+    { name = "mlflow-skinny", marker = "extra == 'serving'", specifier = "==3.17.1" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pandas", specifier = ">=3.1.0" },
     { name = "prometheus-client", marker = "extra == 'frontend'", specifier = ">=0.26.0" },
     { name = "prometheus-client", marker = "extra == 'serving'", specifier = ">=0.26.0" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'mlflow-server'", specifier = ">=3.3.6" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'serving'", specifier = ">=3.3.6" },
+    { name = "psycopg-pool", marker = "extra == 'serving'", specifier = ">=3.2" },
     { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "pydantic", specifier = ">=2.14.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "ray", extras = ["data", "default"], marker = "extra == 'pipeline'", specifier = "==2.59.0" },
-    { name = "scikit-learn", specifier = ">=1.9.1" },
-    { name = "scipy", specifier = ">=1.18.1" },
+    { name = "scikit-learn", marker = "extra == 'pipeline'", specifier = ">=1.9.1" },
+    { name = "scipy", marker = "extra == 'pipeline'", specifier = ">=1.18.1" },
     { name = "streamlit", marker = "extra == 'frontend'", specifier = ">=1.66.1" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'serving'", specifier = ">=0.54.0" },
 ]
-provides-extras = ["pipeline", "serving", "frontend"]
+provides-extras = ["pipeline", "serving", "frontend", "mlflow-server"]
 
 [package.metadata.requires-dev]
 dev = [

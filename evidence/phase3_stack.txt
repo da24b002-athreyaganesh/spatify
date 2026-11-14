@@ -1,0 +1,20 @@
+$ docker compose ps   (2026-11-14T16:50:31+05:30)
+SERVICE        IMAGE                         STATUS                   PORTS
+gateway        spatify/gateway:latest        Up 2 minutes (healthy)   127.0.0.1:8000->8000/tcp
+mlflow         spatify/mlflow:latest         Up 3 minutes (healthy)   127.0.0.1:5000->5000/tcp
+model-server   spatify/model-server:latest   Up 2 minutes (healthy)   8080/tcp
+postgres       postgres:17.12-alpine         Up 3 minutes (healthy)   5432/tcp
+
+$ docker images (spatify)
+REPOSITORY:TAG                      SIZE
+spatify/model-server:latest         1.29GB
+spatify/mlflow:latest               1.29GB
+spatify/gateway:latest              801MB
+
+$ docker compose logs gateway | grep "\"msg\": \"POST" | tail -6   (structured JSON logs, one per request)
+{"ts": "2026-11-14T11:20:16.783+00:00", "level": "INFO", "logger": "spatify.gateway", "msg": "POST /recommend -> 503", "request_id": "20d5da123aa346b8a6268c5b39aa9984", "method": "POST", "path": "/recommend", "status": 503, "ms": 2.0}
+{"ts": "2026-11-14T11:20:17.036+00:00", "level": "INFO", "logger": "spatify.gateway", "msg": "POST /recommend -> 503", "request_id": "1fda81b7c23b4442ac0bc37de0f60d88", "method": "POST", "path": "/recommend", "status": 503, "ms": 1.8}
+{"ts": "2026-11-14T11:20:17.289+00:00", "level": "INFO", "logger": "spatify.gateway", "msg": "POST /recommend -> 503", "request_id": "7385da6a2de340f0be7cab059474ea3b", "method": "POST", "path": "/recommend", "status": 503, "ms": 2.0}
+{"ts": "2026-11-14T11:20:17.543+00:00", "level": "INFO", "logger": "spatify.gateway", "msg": "POST /recommend -> 503", "request_id": "4eb9a3921fd044998061a2998b47b21b", "method": "POST", "path": "/recommend", "status": 503, "ms": 1.9}
+{"ts": "2026-11-14T11:20:17.796+00:00", "level": "INFO", "logger": "spatify.gateway", "msg": "POST /recommend -> 503", "request_id": "97d0cdabccda4f5ab7517b0036926026", "method": "POST", "path": "/recommend", "status": 503, "ms": 1.7}
+{"ts": "2026-11-14T11:20:18.090+00:00", "level": "INFO", "logger": "spatify.gateway", "msg": "POST /recommend -> 200", "request_id": "7a4fbebc8fef4214928368a4099067e3", "method": "POST", "path": "/recommend", "status": 200, "ms": 42.4}

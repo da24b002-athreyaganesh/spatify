@@ -1,0 +1,124 @@
+# Spatify serving stack: Postgres, the MLflow server, the model server and the gateway.
+#
+#   docker compose up -d --build        start (secrets come from .env; see .env.example)
+#   docker compose ps                   health of each service
+#   docker compose logs -f gateway      JSON logs, one line per request
+#   docker compose down                 stop (data stays in the named volumes)
+#
+# Services find each other by service name on the Compose network; only the gateway
+# (8000) and the MLflow UI (5000) are published, and only on localhost.
+# Phase 4 adds the frontend, Phase 5 the worker, Phase 6 Prometheus and Grafana.
+
+name: spatify
+
+x-healthcheck: &probe
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+services:
+  postgres:
+    image: postgres:17.12-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: spatify
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./services/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      <<: *probe
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d spatify"]
+      interval: 5s
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: services/mlflow/Dockerfile
+    image: spatify/mlflow:latest
+    restart: unless-stopped
+    command:
+      - mlflow
+      - server
+      - --host=0.0.0.0
+      - --port=5000
+      - --workers=2
+      - --backend-store-uri=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
+      - --serve-artifacts
+      - --artifacts-destination=/mlflow/artifacts
+      # Other containers call it as mlflow:5000; the host as localhost:5000.
+      - --allowed-hosts=mlflow,mlflow:5000,localhost,localhost:*,127.0.0.1,127.0.0.1:*
+    volumes:
+      - mlflow-artifacts:/mlflow/artifacts
+    ports:
+      - "127.0.0.1:5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=4)"]
+      start_period: 30s
+
+  model-server:
+    build:
+      context: .
+      dockerfile: services/model_server/Dockerfile
+    image: spatify/model-server:latest
+    restart: unless-stopped
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_NAME: spatify
+      MODEL_ALIAS: champion
+      PORT: "8080"
+      WORKERS: "2"
+      POLL_SECONDS: "10"
+    expose:
+      - "8080"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping', timeout=4)"]
+      start_period: 60s
+
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    image: spatify/gateway:latest
+    restart: unless-stopped
+    environment:
+      MODEL_SERVER_URL: http://model-server:8080
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/spatify
+      MODEL_NAME: spatify
+      API_KEY_SHA256: ${API_KEY_SHA256:?set API_KEY_SHA256 in .env}
+      REFRESH_SECONDS: "15"
+      # Fail fast instead of retrying for minutes when MLflow is down.
+      MLFLOW_HTTP_REQUEST_MAX_RETRIES: "1"
+      MLFLOW_HTTP_REQUEST_TIMEOUT: "10"
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+      # Only "started": with no champion yet the model server stays unhealthy, and the
+      # gateway should still come up and say so on /health (503) rather than not start.
+      model-server:
+        condition: service_started
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  mlflow-artifacts:

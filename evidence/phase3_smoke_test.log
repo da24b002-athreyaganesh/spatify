@@ -1,0 +1,45 @@
+$ python scripts/smoke_test.py   (2026-11-14T16:48:43+05:30, against docker compose up)
+== 1. /health (waiting up to 180 s)
+   200 {'postgres': 'ok', 'model_server': 'ok', 'registry': 'champion is version 1'}
+== 2. GET /tracks/search?q=unholy
+   3 hits; seed: Unholy (feat. Kim Petras) (Sam Smith;Kim Petras)
+== 3. POST /recommend with the seed track, k=5
+   model_version 1, request_id 0e49d1ef-65a8-4715-9681-b754a2c613a7
+    1. Shower                               | Becky G                | dance;latin;reggae;reggaet | 0.9509
+    2. Lanet                                | Arda Gezer;Şehinşah;Ca | turkish                    | 0.9495
+    3. SHADY                                | Justin Park            | chill                      | 0.9453
+    4. Super Gremlin Freestyle              | BadKidMacei            | kids                       | 0.9448
+    5. Mean It                              | Lauv;LANY              | electro                    | 0.9307
+== 4. POST /recommend with sliders only (energetic, danceable, happy)
+    1. Tá Estourado                         | Alemão Do Forró        | forro                      | 0.9379
+    2. Flashed Junk Mind                    | Milky Chance           | german                     | 0.9351
+    3. Vuela Junto a Mí                     | Newen Afrobeat         | afrobeat                   | 0.9315
+    4. Ise Nla                              | Tony Allen             | afrobeat                   | 0.9233
+    5. Freedom of Choice - 2009 Remaster    | DEVO                   | synth-pop                  | 0.9221
+== 5. POST /recommend: the seed, but acoustic and calm
+    1. Is There Still Anything That Love Ca | RADWIMPS               | j-pop;j-rock               | 0.9605
+    2. Believe - Acoustic                   | John Adams             | acoustic                   | 0.9554
+    3. Paasa                                | Kurei                  | acoustic                   | 0.9553
+    4. Whole Again - Acoustic Version       | Tobey Rosen            | acoustic;chill             | 0.9521
+    5. Shame                                | Ciaran Lavery          | acoustic;british           | 0.9506
+== 6. Bad requests are refused with a reason
+   unknown seed track: 404
+   no seed and no slider: 422
+   slider out of range: 422
+   k too large: 422
+== 7. POST /feedback
+   like 'Shower': 201, model_version 1
+   skip 'Lanet': 201, model_version 1
+   like on a track that wasn't in the list: 400
+== 8. GET /models
+   v1 ['champion'] all-fisher likes=1 skips=1 like_rate=0.5
+== 9. Admin endpoints need the API key
+   POST /models/rollback without X-API-Key: 401
+   POST /pipeline/trigger without X-API-Key: 401
+== 10. GET /pipeline/status, /drift and /metrics
+   /pipeline/status: {}
+   /drift: 501
+   /metrics: spatify_recommendations_total{model_version="1"} 3.0
+
+All checks passed.
+exit 0

@@ -1,0 +1,307 @@
+"""Gateway tests: the real app, registry logic and model client against fake services.
+
+The model server is an httpx mock speaking the MLflow scoring protocol, the registry is a
+stub MLflow client, and the feedback store is in memory. The same flows run against the
+real Compose stack in scripts/smoke_test.py.
+"""
+
+import hashlib
+import json
+from collections import Counter
+from datetime import UTC, datetime
+from types import SimpleNamespace
+
+import httpx
+import pandas as pd
+import pytest
+from fastapi.testclient import TestClient
+from mlflow.exceptions import MlflowException
+
+from spatify.gateway.app import create_app
+from spatify.gateway.model_client import ModelClient
+from spatify.gateway.registry import Registry
+from spatify.gateway.settings import Settings
+
+KEY = "test-admin-key"
+
+
+class FakeStore:
+    def __init__(self):
+        self.lists, self.feedback, self.runs = {}, {}, []
+        self.up = True
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
+    def ping(self):
+        return self.up
+
+    def save_recommendation(self, request_id, seed, sliders, k, version, run_id, track_ids):
+        self.lists[request_id] = {
+            "track_ids": track_ids,
+            "model_version": version,
+            "model_run_id": run_id,
+        }
+
+    def get_recommendation(self, request_id):
+        return self.lists.get(request_id)
+
+    def save_feedback(self, request_id, track_id, rank, action, version, run_id):
+        self.feedback[(request_id, track_id)] = {"rank": rank, "action": action, "version": version}
+
+    def feedback_by_version(self):
+        counts = {}
+        for row in self.feedback.values():
+            c = counts.setdefault(row["version"], {"likes": 0, "skips": 0})
+            c["likes" if row["action"] == "like" else "skips"] += 1
+        return counts
+
+    def pipeline_runs(self, limit):
+        return list(reversed(self.runs))[:limit]
+
+    def pipeline_counts(self):
+        return dict(Counter(r["status"] for r in self.runs))
+
+    def request_pipeline_run(self, trigger):
+        row = {
+            "id": len(self.runs) + 1,
+            "requested_at": datetime.now(UTC),
+            "started_at": None,
+            "finished_at": None,
+            "trigger": trigger,
+            "status": "requested",
+            "stages": {},
+            "model_version": None,
+            "promoted": None,
+            "message": None,
+        }
+        self.runs.append(row)
+        return row
+
+
+class StubMlflowClient:
+    """The registry calls the gateway makes, on an in-memory model with versions 1 and 2."""
+
+    def __init__(self):
+        self.aliases = {"champion": "2", "previous": "1"}
+        self.tags = {}
+
+    def get_registered_model(self, name):
+        return SimpleNamespace(aliases=dict(self.aliases))
+
+    def search_model_versions(self, filter_string):
+        return [
+            SimpleNamespace(
+                version=str(v),
+                run_id=f"run-{v}",
+                creation_timestamp=1_763_000_000_000 + v,
+                description=f"version {v}",
+                tags={"variant": "all-fisher", "dataset_version": "abc", "trigger": "manual"},
+            )
+            for v in (1, 2)
+        ]
+
+    def get_model_version(self, name, version):
+        if version not in ("1", "2"):
+            raise MlflowException("not found")
+        return SimpleNamespace(version=version)
+
+    def set_registered_model_alias(self, name, alias, version):
+        self.aliases[alias] = version
+
+    def set_model_version_tag(self, name, version, key, value):
+        self.tags[(version, key)] = value
+
+
+class FakeModelServer:
+    """Answers /ping and /invocations like `mlflow models serve`; `up = False` takes it down."""
+
+    def __init__(self):
+        self.up = True
+        self.client = ModelClient("http://model-server", 1.0, httpx.MockTransport(self.handle))
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        if not self.up:
+            raise httpx.ConnectError("connection refused")
+        if request.url.path == "/ping":
+            return httpx.Response(200)
+        body = json.loads(request.content)
+        record, k = body["dataframe_records"][0], body["params"]["k"]
+        if record.get("track_id") == "missing":
+            message = "Failed to predict data. \nError: Unknown seed track_id: missing"
+            return httpx.Response(
+                400, json={"error_code": "INVALID_PARAMETER_VALUE", "message": message}
+            )
+        rows = [
+            {
+                "query": 0,
+                "rank": i + 1,
+                "track_id": f"t{i}",
+                "track_name": f"Song {i}",
+                "artists": "Band",
+                "album_name": "Album",
+                "genres": "pop;rock",
+                "popularity": 50,
+                "score": round(0.9 - i / 100, 4),
+                "model_run_id": "run-2",
+            }
+            for i in range(k)
+        ]
+        return httpx.Response(200, json={"predictions": rows})
+
+
+@pytest.fixture
+def gw():
+    store, server = FakeStore(), FakeModelServer()
+    stub = StubMlflowClient()
+    registry = Registry("http://mlflow:5000", "spatify", client=stub)
+    catalogue = pd.DataFrame(
+        {
+            "track_id": ["a", "b", "c"],
+            "track_name": ["Unholy", "Holy Water", "Other Song"],
+            "artists": ["Sam Smith", "Band", "Unholy Choir"],
+            "album_name": ["x", "y", "z"],
+            "genres": ["pop", "rock", "choral"],
+            "popularity": [100, 40, 10],
+        }
+    )
+    registry.load_catalogue(2, catalogue)
+    settings = Settings(
+        api_key_sha256=hashlib.sha256(KEY.encode()).hexdigest(), refresh_seconds=3600
+    )
+    app = create_app(settings, store=store, registry=registry, model=server.client)
+    with TestClient(app) as client:
+        yield SimpleNamespace(client=client, store=store, server=server, mlflow=stub)
+
+
+def test_recommend_by_seed_names_the_model_and_saves_the_list(gw):
+    r = gw.client.post("/recommend", json={"track_id": "a", "k": 3})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["model_version"] == 2  # run-2 mapped through the registry
+    assert [t["rank"] for t in body["recommendations"]] == [1, 2, 3]
+    assert body["recommendations"][0]["genres"] == ["pop", "rock"]
+    saved = gw.store.lists[next(iter(gw.store.lists))]
+    assert saved["track_ids"] == ["t0", "t1", "t2"] and saved["model_version"] == 2
+    assert "x-request-id" in r.headers
+
+
+def test_recommend_by_sliders_only(gw):
+    r = gw.client.post("/recommend", json={"sliders": {"energy": 0.9, "mode": 1}})
+    assert r.status_code == 200 and len(r.json()["recommendations"]) == 10
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},  # neither a seed nor a slider
+        {"sliders": {}},
+        {"sliders": {"energy": 1.5}},  # out of range
+        {"sliders": {"tempo": -1}},
+        {"sliders": {"loudnes": -5}},  # unknown slider
+        {"track_id": "a", "k": 0},
+        {"track_id": "a", "k": 51},
+        {"track_id": ""},
+    ],
+)
+def test_bad_requests_are_rejected_before_the_model(gw, body):
+    assert gw.client.post("/recommend", json=body).status_code == 422
+
+
+def test_unknown_seed_track_is_404(gw):
+    r = gw.client.post("/recommend", json={"track_id": "missing"})
+    assert r.status_code == 404
+    assert "/tracks/search" in r.json()["detail"]
+
+
+def test_model_server_down_gives_a_friendly_503_and_unhealthy(gw):
+    gw.server.up = False
+    r = gw.client.post("/recommend", json={"track_id": "a"})
+    assert r.status_code == 503
+    assert "Try again" in r.json()["detail"]
+    health = gw.client.get("/health")
+    assert health.status_code == 503
+    assert health.json()["checks"]["model_server"] == "unreachable"
+
+
+def test_health_needs_postgres_too(gw):
+    assert gw.client.get("/health").status_code == 200
+    gw.store.up = False
+    assert gw.client.get("/health").status_code == 503
+
+
+def test_feedback_is_tied_to_the_list_and_model(gw):
+    shown = gw.client.post("/recommend", json={"track_id": "a", "k": 3}).json()
+    rid = shown["request_id"]
+    r = gw.client.post("/feedback", json={"request_id": rid, "track_id": "t1", "action": "like"})
+    assert r.status_code == 201 and r.json()["model_version"] == 2
+    assert next(iter(gw.store.feedback.values())) == {"rank": 2, "action": "like", "version": 2}
+
+    not_shown = {"request_id": rid, "track_id": "zzz", "action": "skip"}
+    assert gw.client.post("/feedback", json=not_shown).status_code == 400
+    unknown = {
+        "request_id": "00000000-0000-0000-0000-000000000000",
+        "track_id": "t1",
+        "action": "like",
+    }
+    assert gw.client.post("/feedback", json=unknown).status_code == 404
+    bad_action = {"request_id": rid, "track_id": "t1", "action": "love"}
+    assert gw.client.post("/feedback", json=bad_action).status_code == 422
+
+
+def test_search_puts_title_matches_first(gw):
+    r = gw.client.get("/tracks/search", params={"q": "unholy"})
+    assert r.status_code == 200
+    assert [t["track_id"] for t in r.json()["tracks"]] == ["a", "c"]  # title before artist
+    assert gw.client.get("/tracks/search", params={"q": "u"}).status_code == 422
+
+
+def test_models_show_aliases_and_like_rate(gw):
+    shown = gw.client.post("/recommend", json={"track_id": "a", "k": 2}).json()
+    for track, action in (("t0", "like"), ("t1", "skip")):
+        gw.client.post(
+            "/feedback",
+            json={"request_id": shown["request_id"], "track_id": track, "action": action},
+        )
+    body = gw.client.get("/models").json()
+    assert (body["champion"], body["previous"]) == (2, 1)
+    v2 = next(v for v in body["versions"] if v["version"] == 2)
+    assert v2["aliases"] == ["champion"] and v2["like_rate"] == 0.5
+
+
+def test_rollback_needs_the_key_and_swaps_champion_and_previous(gw):
+    assert gw.client.post("/models/rollback").status_code == 401
+    wrong = {"X-API-Key": "nope"}
+    assert gw.client.post("/models/rollback", headers=wrong).status_code == 401
+    r = gw.client.post("/models/rollback", headers={"X-API-Key": KEY})
+    assert r.status_code == 200
+    assert (r.json()["champion"], r.json()["previous"]) == (1, 2)
+    assert gw.mlflow.aliases == {"champion": "1", "previous": "2"}
+    again = gw.client.post("/models/rollback", headers={"X-API-Key": KEY}, json={"version": 1})
+    assert again.status_code == 409  # already the champion
+
+
+def test_pipeline_trigger_queues_a_run(gw):
+    assert gw.client.post("/pipeline/trigger").status_code == 401
+    r = gw.client.post("/pipeline/trigger", headers={"X-API-Key": KEY})
+    assert r.status_code == 202 and r.json()["status"] == "requested"
+    assert gw.client.get("/pipeline/runs").json()[0]["id"] == r.json()["id"]
+    assert gw.client.get("/pipeline/status").json()["counts"] == {"requested": 1}
+
+
+def test_metrics_count_requests_by_endpoint(gw):
+    gw.client.post("/recommend", json={"track_id": "a"})
+    text = gw.client.get("/metrics").text
+    assert (
+        'spatify_gateway_requests_total{endpoint="/recommend",method="POST",status="200"}' in text
+    )
+    assert 'spatify_recommendations_total{model_version="2"}' in text
+    assert "spatify_model_server_request_seconds_bucket" in text
+    assert "_created" not in text  # disable_created_metrics()
+
+
+def test_drift_is_not_available_yet(gw):
+    assert gw.client.get("/drift").status_code == 501

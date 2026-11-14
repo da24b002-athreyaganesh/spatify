@@ -116,3 +116,38 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Aliases:** `champion` is served; `previous` is the rollback target; `challenger` is the latest candidate that wasn't promoted. Stages are deprecated (L3, L10).
 - **Not promoting is not a failure:** the stage exits 0 and the champion keeps serving.
 - **Measured:** the first run registered version 1 and promoted it. Retraining on unchanged data registered version 2 with a gain of 0.0, so it was not promoted (`evidence/phase2_gate_not_promoted.log`). The two runs' metrics are identical apart from timings.
+
+## D23. The serving stack: four Compose services
+- **Services:** `postgres` (the feedback store, plus a second database for MLflow), `mlflow` (tracking server and model registry), `model-server` and `gateway`. The frontend (Phase 4), worker (Phase 5) and Prometheus and Grafana (Phase 6) join later.
+- **Addresses:** services reach each other by name (`mlflow:5000`, `model-server:8080`, `postgres:5432`), set through environment variables. Only the gateway (8000) and the MLflow UI (5000) are published, and only on 127.0.0.1; Postgres and the model server stay on the Compose network.
+- **Secrets:** in `.env`, which Git ignores. `scripts/make_env.py` fills it with random values and `.env.example` documents it. Compose refuses to start if a secret is missing.
+- **Start order:** health checks, with `depends_on: condition: service_healthy` for Postgres and MLflow. The gateway waits for the model server only to *start*: on a fresh stack there is no champion yet, so the model server stays unhealthy, and the gateway should still come up and report it (`/health` 503).
+- **First champion:** the Phase 2 registry in the local `mlflow.db` isn't migrated. The stack's first champion comes from one pipeline run against the server (`MLFLOW_TRACKING_URI=http://localhost:5000 dvc repro --force --downstream train`, in `evidence/phase3_bootstrap.log`). It scored the same 0.1348 as in Phase 2.
+
+## D24. Model server: a supervisor that follows the champion alias
+- **Why:** `mlflow models serve -m models:/spatify@champion` resolves the alias once, at start-up (L10), so promotions and rollbacks would never reach a running server. The supervisor (`src/spatify/model_server.py`) resolves the alias to a version number itself and serves that exact version (`models:/spatify/<n>`). It re-reads the alias every 10 s and restarts the server when it moves. It also restarts a crashed server, and keeps serving if the registry is unreachable.
+- **Measured** (`evidence/phase3_rollback.log`): after a rollback through the gateway, answers came from the new version 9.5–13.4 s later. Up to 10 s of that is the poll interval, during which the old version still answers normally. About 5 s is the restart, during which `/recommend` answers 503 "try again in a few seconds".
+- **Considered:** `mlflow models build-docker`, which bakes one version into an image, so every promotion or rollback would need an image build and a redeploy. Also two servers with a switch in front (blue-green), which would remove the 5 s gap; not worth the extra moving parts here.
+
+## D25. MLflow server: Postgres backend, artifacts served by the server
+- **How:** runs and the registry live in Postgres (`postgresql+psycopg://…/mlflow`). Artifacts live in the `mlflow-artifacts` volume and pass through the server (`--serve-artifacts`), so the host pipeline, the model server and the gateway need only HTTP to MLflow, no shared filesystem.
+- **`--allowed-hosts`:** MLflow 3 rejects Host headers other than localhost and private IPs, a protection against DNS rebinding. Containers call it as `mlflow:5000`, so that name is allowed explicitly.
+
+## D26. Gateway: FastAPI, and every served list is stored
+- **Boundary:** the frontend reaches the model, the registry and the database only through the gateway's REST API (`/docs`).
+- **Traceable feedback:** every `/recommend` answer is saved (request ID, seed, sliders, K, model version, track IDs). Feedback must name a request ID and a track in that list, so each like or skip carries the model version and the position it was shown at (FR2), and feedback on tracks that weren't shown is refused. Phase 5's hit rate, like rate per version and exploration logging build on this. The model returns its training run ID; the gateway maps it to a version through the registry.
+- **`/health`:** 200 only when Postgres and the model server answer (the TA guide deducts for a health check that always returns 200). MLflow is reported but not required, since serving continues while MLflow is down.
+- **Errors:** a request that fails validation gets a 422 naming the field, before it reaches the model. An unknown seed gets a 404 pointing to search; the model server being down gets a 503 with a retry message, as does the database being down. An impossible rollback gets a 409, and anything unexpected a 500 with the request ID. Every response carries `X-Request-ID`, and every request is logged as one JSON line (`evidence/phase3_stack.txt`).
+- **Search** runs over the champion's own catalogue, downloaded from its model files when the champion changes, so a seed found by search is always one the served model knows.
+- **mlflow-skinny,** the client without the server, keeps the gateway image smaller.
+
+## D27. Images: multi-stage builds from the same lock file
+- **How:** the builder stage is `python:3.12.15-slim` plus uv 0.13.5. `uv sync --frozen` installs the dependencies first (a cached layer that survives code changes), then the code as a regular package. The final stage is the slim image plus the virtual environment only, running as a non-root user. `.dockerignore` is an allow-list: the build context is just `pyproject.toml`, `uv.lock`, `.python-version`, `README.md` and `src/`.
+- **One extra per image:** the gateway installs `serving`; MLflow and the model server install `mlflow-server`. scikit-learn and scipy moved from the base dependencies to `pipeline`, since nothing outside the pipeline uses them; `python_env.yaml` came out identical.
+- **Sizes:** gateway 801 MB; MLflow and model server 1.29 GB each, sharing almost all their layers. Base images are pinned (`python:3.12.15-slim`, `postgres:17.12-alpine`, `uv:0.13.5`).
+
+## D28. Admin endpoints need a hashed API key
+- **How:** `POST /models/rollback` and `POST /pipeline/trigger` need an `X-API-Key` header. The gateway holds only the key's SHA-256 (`API_KEY_SHA256`), compares in constant time, and refuses admin actions altogether if no hash is set. The plain key stays in `.env` for the operator and, in Phase 4, the frontend.
+
+## D29. Pipeline triggers go into a queue table in Postgres
+- **How:** `POST /pipeline/trigger` inserts a `requested` row in `pipeline_runs`. The worker (Phase 5) claims requested rows, runs the pipeline and fills in status, stages, durations and the model version. The gateway and the worker share Postgres rather than calling each other over HTTP, so a trigger survives a worker restart, and the run history the console shows comes from the same table.
