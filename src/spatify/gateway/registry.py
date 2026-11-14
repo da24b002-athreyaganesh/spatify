@@ -1,10 +1,13 @@
 """The gateway's view of the MLflow Model Registry: versions, aliases and the catalogue.
 
+For the champion it also keeps the model's own catalogue (for search) and settings (for
+the "why" labels, D33), both read from the files packaged inside the model version.
 Uses mlflow-skinny (the client without the server), so the gateway image stays small.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import tempfile
 import threading
@@ -15,6 +18,9 @@ import mlflow
 import pandas as pd
 from mlflow import MlflowClient
 from mlflow.exceptions import MlflowException
+
+from spatify.model.explain import explain
+from spatify.model.recommender import QueryError, Recommender
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +39,8 @@ class Registry:
         self.champion_version: int | None = None
         self.catalogue: pd.DataFrame | None = None  # the champion's tracks, for search
         self._catalogue_version: int | None = None
+        self._explainer: Recommender | None = None  # the champion's scaler and weights
+        self._explainer_run: str | None = None
         self._run_versions: dict[str, int] = {}
         self._lock = threading.Lock()
 
@@ -78,28 +86,48 @@ class Registry:
         champion = self.aliases().get("champion")
         self.champion_version = champion
         if champion is not None and champion != self._catalogue_version:
-            self.load_catalogue(champion, self._download_catalogue(champion))
+            self.load_catalogue(champion, *self._download_model_files(champion))
 
-    def _download_catalogue(self, version: int) -> pd.DataFrame:
-        """The catalogue.parquet packaged inside a model version (through MLflow's proxy)."""
+    def _download_model_files(self, version: int) -> tuple[pd.DataFrame, dict]:
+        """catalogue.parquet and model_info.json from inside a model version (via MLflow)."""
         root = self.client.get_model_version_download_uri(self.name, str(version))
         with tempfile.TemporaryDirectory() as tmp:
-            path = mlflow.artifacts.download_artifacts(
-                artifact_uri=f"{root}/artifacts/catalogue.parquet",
-                dst_path=tmp,
-                tracking_uri=self.tracking_uri,
-            )
-            return pd.read_parquet(Path(path))
+            files = {}
+            for name in ("catalogue.parquet", "model_info.json"):
+                files[name] = mlflow.artifacts.download_artifacts(
+                    artifact_uri=f"{root}/artifacts/{name}",
+                    dst_path=tmp,
+                    tracking_uri=self.tracking_uri,
+                )
+            catalogue = pd.read_parquet(Path(files["catalogue.parquet"]))
+            info = json.loads(Path(files["model_info.json"]).read_text())
+        return catalogue, info
 
-    def load_catalogue(self, version: int, catalogue: pd.DataFrame) -> None:
-        """Make this the searchable catalogue (lower-cased copies speed up search)."""
-        catalogue = catalogue.assign(
+    def load_catalogue(
+        self, version: int, catalogue: pd.DataFrame, info: dict | None = None
+    ) -> None:
+        """Make this version's tracks searchable and, given its settings, explainable."""
+        explainer = Recommender.from_info(catalogue, info) if info else None
+        searchable = catalogue.assign(  # lower-cased copies speed up search
             _name=catalogue["track_name"].fillna("").str.lower(),
             _artists=catalogue["artists"].fillna("").str.lower(),
         )
         with self._lock:
-            self.catalogue, self._catalogue_version = catalogue, version
+            self.catalogue, self._catalogue_version = searchable, version
+            self._explainer, self._explainer_run = explainer, (info or {}).get("run_id")
         log.info("Loaded the catalogue of version %s (%d tracks)", version, len(catalogue))
+
+    def why(self, query: dict, track_ids: list[str], run_id: str) -> list[list[str]]:
+        """ "Why" labels per track (D33), or none when the answer came from a model other
+        than the one loaded here (the champion just changed) or can't be explained."""
+        with self._lock:
+            explainer, loaded_run = self._explainer, self._explainer_run
+        if explainer is None or loaded_run != run_id:
+            return [[] for _ in track_ids]
+        try:
+            return explain(explainer, pd.DataFrame([query]), track_ids)
+        except QueryError:
+            return [[] for _ in track_ids]
 
     def search(self, query: str, limit: int) -> tuple[int, pd.DataFrame] | None:
         """Tracks whose title or artist contains the query; title-prefix matches first."""

@@ -1,13 +1,13 @@
-# Spatify serving stack: Postgres, the MLflow server, the model server and the gateway.
+# Spatify stack: Postgres, the MLflow server, the model server, the gateway and the frontend.
 #
 #   docker compose up -d --build        start (secrets come from .env; see .env.example)
 #   docker compose ps                   health of each service
 #   docker compose logs -f gateway      JSON logs, one line per request
 #   docker compose down                 stop (data stays in the named volumes)
 #
-# Services find each other by service name on the Compose network; only the gateway
-# (8000) and the MLflow UI (5000) are published, and only on localhost.
-# Phase 4 adds the frontend, Phase 5 the worker, Phase 6 Prometheus and Grafana.
+# Services find each other by service name on the Compose network. Published, on
+# localhost only: the web app (8501), its metrics (9101), the gateway (8000) and the
+# MLflow UI (5000). Phase 5 adds the worker, Phase 6 Prometheus and Grafana.
 #
 # Memory (D30): every service has a hard limit with no swap, so a runaway service is
 # stopped and restarted instead of pushing the laptop into swap. The whole stack fits
@@ -119,6 +119,13 @@ services:
       # Fail fast instead of retrying for minutes when MLflow is down.
       MLFLOW_HTTP_REQUEST_MAX_RETRIES: "1"
       MLFLOW_HTTP_REQUEST_TIMEOUT: "10"
+      PIPELINE_DIR: /app/pipeline
+    volumes:
+      # The console's pipeline view (D34): the DVC pipeline, its last results and the
+      # stage metrics, read-only.
+      - ./dvc.yaml:/app/pipeline/dvc.yaml:ro
+      - ./dvc.lock:/app/pipeline/dvc.lock:ro
+      - ./metrics:/app/pipeline/metrics:ro
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -135,6 +142,36 @@ services:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
       start_period: 20s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    image: spatify/frontend:latest
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    environment:
+      API_BASE_URL: http://gateway:8000  # the frontend's only way to the backend
+      METRICS_PORT: "9101"
+      # Links the console opens in the operator's browser, so host addresses.
+      MLFLOW_UI_URL: http://localhost:5000
+      GRAFANA_URL: http://localhost:3000
+      PROMETHEUS_URL: http://localhost:9090
+      RAY_DASHBOARD_URL: http://localhost:8265
+      GATEWAY_DOCS_URL: http://localhost:8000/docs
+    ports:
+      - "127.0.0.1:8501:8501"
+      - "127.0.0.1:9101:9101"
+    depends_on:
+      # Only "started": the app should come up and explain an unavailable gateway itself.
+      gateway:
+        condition: service_started
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=4)"]
+      start_period: 30s
 
 volumes:
   postgres-data:

@@ -1,0 +1,279 @@
+"""Frontend tests: each page run headless with Streamlit's AppTest, against a fake gateway.
+
+The fake answers the gateway's REST endpoints and records every call, so the tests check
+both what the page shows and what it sends.
+"""
+
+import json
+from pathlib import Path
+
+import httpx
+import pytest
+import streamlit as st
+from streamlit.testing.v1 import AppTest
+
+from spatify.frontend import api, ui
+
+VIEWS = Path(__file__).parents[1] / "src/spatify/frontend/views"
+KEY = "secret"
+
+DAG = {
+    "stages": [
+        {
+            "name": "ingest",
+            "status": "ok",
+            "command": "python -m x",
+            "metrics": {"rows_per_s": 20000.0, "seconds": 4.0, "rows": 80000.0},
+        },
+        {"name": "train", "status": "failed", "command": "mlflow run", "metrics": {}},
+    ],
+    "inputs": ["data/incoming"],
+    "edges": [["data/incoming", "ingest"], ["ingest", "train"]],
+}
+VERSIONS = [
+    {
+        "version": 2,
+        "aliases": ["champion"],
+        "run_id": "r2",
+        "created_at": "2026-11-14T10:00:00Z",
+        "description": "v2",
+        "variant": "all-fisher",
+        "dataset_version": "abcdef123",
+        "git_commit": "0348807abc",
+        "trigger": "manual",
+        "likes": 3,
+        "skips": 1,
+        "like_rate": 0.75,
+    },
+    {
+        "version": 1,
+        "aliases": ["previous"],
+        "run_id": "r1",
+        "created_at": "2026-11-13T10:00:00Z",
+        "description": "v1",
+        "variant": "all-fisher",
+        "dataset_version": "abcdef123",
+        "git_commit": "0348807abc",
+        "trigger": "manual",
+        "likes": 0,
+        "skips": 0,
+        "like_rate": None,
+    },
+]
+
+
+class FakeGateway:
+    def __init__(self):
+        self.calls, self.down = [], False
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        if self.down:
+            raise httpx.ConnectError("connection refused")
+        path, method = request.url.path, request.method
+        body = json.loads(request.content) if request.content else None
+        self.calls.append((method, path, body, request.headers.get("x-api-key")))
+        admin = request.headers.get("x-api-key") == KEY
+        if path == "/tracks/search":
+            q = request.url.params["q"]
+            tracks = (
+                []
+                if q == "zzz"
+                else [
+                    {
+                        "track_id": "s1",
+                        "track_name": "Unholy",
+                        "artists": "Sam Smith",
+                        "album_name": "Gloria",
+                        "genres": ["pop"],
+                        "popularity": 99,
+                    }
+                ]
+            )
+            return httpx.Response(200, json={"query": q, "model_version": 2, "tracks": tracks})
+        if path == "/recommend":
+            recs = [
+                {
+                    "track_id": f"t{i}",
+                    "track_name": f"Song {i}",
+                    "artists": "Band",
+                    "album_name": "LP",
+                    "genres": ["pop"],
+                    "popularity": 50,
+                    "rank": i + 1,
+                    "score": 0.9,
+                    "why": ["energetic"],
+                }
+                for i in range(body["k"])
+            ]
+            return httpx.Response(
+                200,
+                json={
+                    "request_id": "11111111-1111-1111-1111-111111111111",
+                    "model_version": 2,
+                    "model_run_id": "r2",
+                    "recommendations": recs,
+                },
+            )
+        if path == "/feedback":
+            return httpx.Response(201, json={"status": "recorded", "model_version": 2})
+        if path == "/health":
+            return httpx.Response(
+                200,
+                json={
+                    "status": "ok",
+                    "checks": {
+                        "postgres": "ok",
+                        "model_server": "ok",
+                        "registry": "champion is version 2",
+                    },
+                },
+            )
+        if path == "/pipeline/dag":
+            return httpx.Response(200, json=DAG)
+        if path == "/pipeline/status":
+            return httpx.Response(200, json={"latest": None, "counts": {}})
+        if path == "/pipeline/runs":
+            return httpx.Response(200, json=[])
+        if path == "/models":
+            return httpx.Response(
+                200,
+                json={
+                    "name": "spatify",
+                    "champion": 2,
+                    "previous": 1,
+                    "challenger": None,
+                    "versions": VERSIONS,
+                },
+            )
+        if path == "/models/rollback":
+            if not admin:
+                return httpx.Response(401, json={"detail": "Missing or wrong X-API-Key header"})
+            return httpx.Response(
+                200, json={"champion": 1, "previous": 2, "detail": "Version 1 is now the champion."}
+            )
+        if path == "/pipeline/trigger":
+            if not admin:
+                return httpx.Response(401, json={"detail": "Missing or wrong X-API-Key header"})
+            return httpx.Response(202, json={"id": 7, "status": "requested"})
+        if path == "/drift":
+            return httpx.Response(501, json={"detail": "Drift monitoring is not available yet"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+
+@pytest.fixture
+def gateway():
+    fake = FakeGateway()
+    api.TRANSPORT = httpx.MockTransport(fake.handle)
+    st.cache_data.clear()
+    yield fake
+    api.TRANSPORT = None
+
+
+def page(name: str) -> AppTest:
+    at = AppTest.from_file(str(VIEWS / f"{name}.py"), default_timeout=30)
+    at.run()
+    assert not at.exception, at.exception
+    return at
+
+
+def texts(elements) -> str:
+    return " ".join(str(e.value) for e in elements)
+
+
+def test_discover_from_a_seed_song_to_feedback(gateway):
+    at = page("discover")
+    assert at.button(key="go").disabled  # nothing chosen yet
+    at.text_input(key="search").input("unholy").run()
+    at.selectbox(key="seed-unholy").select_index(0).run()
+    assert not at.button(key="go").disabled
+    at.slider(key="k").set_value(3).run()
+    at.button(key="go").click().run()
+    assert not at.exception
+    sent = next(c for c in gateway.calls if c[1] == "/recommend")
+    assert sent[2] == {"track_id": "s1", "sliders": {}, "k": 3}
+    assert "Chosen by model version 2" in texts(at.caption)
+    assert "**Why:** energetic" in texts(at.markdown)
+
+    like = f"like-{at.session_state['result']['request_id']}-t0"
+    at.button(key=like).click().run()
+    feedback = next(c for c in gateway.calls if c[1] == "/feedback")
+    assert feedback[2]["action"] == "like" and feedback[2]["track_id"] == "t0"
+    assert at.button(key=like).disabled  # can't like twice; Skip still works
+
+
+def test_sliders_alone_are_enough(gateway):
+    at = page("discover")
+    at.toggle(key="use-energy").set_value(True).run()
+    at.button(key="go").click().run()
+    sent = next(c for c in gateway.calls if c[1] == "/recommend")
+    assert sent[2]["sliders"] == {"energy": 0.7} and "track_id" not in sent[2]
+
+
+def test_no_matches_says_what_to_do(gateway):
+    at = page("discover")
+    at.text_input(key="search").input("zzz").run()
+    assert "No songs match" in texts(at.info)
+
+
+def test_gateway_down_is_a_friendly_message_not_a_crash(gateway):
+    gateway.down = True
+    at = page("discover")
+    at.text_input(key="search").input("unholy").run()
+    assert not at.exception
+    assert "can't reach its server" in texts(at.error)
+
+
+def test_console_shows_pipeline_models_and_drift(gateway):
+    at = page("console")
+    assert len(at.get("graphviz_chart")) == 1
+    assert "isn't available yet" in texts(at.info)  # drift arrives in Phase 5
+    assert "No pipeline runs recorded yet" in texts(at.info)
+    assert at.button(key="rollback").disabled  # no key, not confirmed
+    assert at.button(key="run-pipeline").disabled
+
+
+def test_console_rollback_sends_the_admin_key(gateway):
+    at = page("console")
+    at.sidebar.text_input(key="admin_key").input(KEY)
+    at.checkbox(key="rollback_confirm").check().run()
+    at.button(key="rollback").click().run()
+    sent = next(c for c in gateway.calls if c[1] == "/models/rollback")
+    assert sent[2] == {"version": 1} and sent[3] == KEY
+    assert "Version 1 is now the champion" in texts(at.success)
+
+
+def test_console_wrong_key_is_explained(gateway):
+    at = page("console")
+    at.sidebar.text_input(key="admin_key").input("wrong").run()
+    at.button(key="run-pipeline").click().run()
+    assert "admin key isn't right" in texts(at.warning)
+
+
+def test_help_page_renders(gateway):
+    at = page("help")
+    assert "Get recommendations in three steps" in texts(at.header)
+
+
+def test_dag_diagram_colours_stages_by_result():
+    dot = ui.dag_dot(DAG)
+    assert '"ingest" -> "train";' in dot and '"data/incoming" -> "ingest";' in dot
+    assert ui.GREEN in dot and ui.VERMILLION in dot  # ok and failed
+    assert "20,000 rows/s" in dot
+
+
+def test_titles_with_markdown_characters_show_as_written():
+    assert ui.md("*NSYNC [Live]") == r"\*NSYNC \[Live\]"
+
+
+def test_like_rate_chart_needs_feedback():
+    assert ui.like_rate_chart([VERSIONS[1]]) is None
+    assert ui.like_rate_chart(VERSIONS) is not None
+
+
+def test_the_app_opens_on_discover_and_navigates(gateway):
+    at = AppTest.from_file(str(VIEWS.parent / "app.py"), default_timeout=30)
+    at.run()
+    assert not at.exception and at.title[0].value == "Discover music"
+    for view, title in (("console", "Operator console"), ("help", "Help")):
+        at.switch_page(f"views/{view}.py").run()
+        assert not at.exception and at.title[0].value == title

@@ -18,7 +18,7 @@ Needs Docker with Compose, Git LFS and uv.
 ## Run the serving stack
 
     uv run python scripts/make_env.py        # once: .env with random secrets
-    docker compose up -d --build             # postgres, mlflow, model-server, gateway
+    docker compose up -d --build             # postgres, mlflow, model-server, gateway, frontend
 
     # First start only: train into the stack's MLflow, so there is a champion to serve.
     export MLFLOW_TRACKING_URI=http://localhost:5000
@@ -26,6 +26,7 @@ Needs Docker with Compose, Git LFS and uv.
 
     uv run python scripts/smoke_test.py      # end-to-end check through the gateway
 
+- The web app (Discover, the operator console, Help): http://localhost:8501
 - Gateway API, with interactive docs: http://localhost:8000/docs
 - MLflow UI (runs, model versions, aliases): http://localhost:5000
 - Admin calls (rollback, pipeline trigger) need the `X-API-Key` header; the key is `SPATIFY_API_KEY` in `.env`.

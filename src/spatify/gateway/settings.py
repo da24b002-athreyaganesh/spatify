@@ -20,6 +20,8 @@ class Settings:
     model_timeout_seconds: float = 5.0
     # How often the champion version and the model server's health are re-checked.
     refresh_seconds: float = 15.0
+    # Read-only mount of dvc.yaml, dvc.lock and metrics/, for the console's pipeline view.
+    pipeline_dir: str = "/app/pipeline"
     log_level: str = "INFO"
 
     @classmethod
@@ -33,5 +35,6 @@ class Settings:
             api_key_sha256=env("API_KEY_SHA256", cls.api_key_sha256).strip().lower(),
             model_timeout_seconds=float(env("MODEL_TIMEOUT_SECONDS", cls.model_timeout_seconds)),
             refresh_seconds=float(env("REFRESH_SECONDS", cls.refresh_seconds)),
+            pipeline_dir=env("PIPELINE_DIR", cls.pipeline_dir),
             log_level=env("LOG_LEVEL", cls.log_level),
         )

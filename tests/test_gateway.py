@@ -305,3 +305,142 @@ def test_metrics_count_requests_by_endpoint(gw):
 
 def test_drift_is_not_available_yet(gw):
     assert gw.client.get("/drift").status_code == 501
+
+
+# --- "Why" labels (D33) ---------------------------------------------------------------
+
+
+def explainable_registry(run_id: str) -> Registry:
+    """A registry whose champion catalogue holds the tracks the fake model server returns."""
+    catalogue = pd.DataFrame(
+        {
+            "track_id": [f"t{i}" for i in range(6)],
+            "track_name": [f"Song {i}" for i in range(6)],
+            "artists": "Band",
+            "album_name": "Album",
+            "genres": "pop",
+            "popularity": 50,
+            "energy": [0.95, 0.9, 0.1, 0.5, 0.4, 0.6],
+            "danceability": [0.8, 0.2, 0.5, 0.5, 0.6, 0.4],
+        }
+    )
+    columns = ["energy", "danceability"]
+    info = {
+        "columns": columns,
+        "mean": {c: float(catalogue[c].mean()) for c in columns},
+        "std": {c: float(catalogue[c].std(ddof=0)) for c in columns},
+        "weights": dict.fromkeys(columns, 1.0),
+        "run_id": run_id,
+    }
+    registry = Registry("http://mlflow:5000", "spatify", client=StubMlflowClient())
+    registry.load_catalogue(2, catalogue, info)
+    return registry
+
+
+def client_with(registry: Registry) -> TestClient:
+    settings = Settings(
+        api_key_sha256=hashlib.sha256(KEY.encode()).hexdigest(), refresh_seconds=3600
+    )
+    app = create_app(settings, store=FakeStore(), registry=registry, model=FakeModelServer().client)
+    return TestClient(app)
+
+
+def test_recommendations_say_why():
+    with client_with(explainable_registry("run-2")) as client:  # run-2 answers, as loaded
+        recs = client.post("/recommend", json={"sliders": {"energy": 0.9}, "k": 3}).json()
+    why = {r["track_id"]: r["why"] for r in recs["recommendations"]}
+    assert why == {"t0": ["energetic"], "t1": ["energetic"], "t2": []}  # t2 is calm
+
+
+def test_no_labels_when_another_model_answered():
+    # The gateway has version 1's settings loaded, but the champion just changed.
+    with client_with(explainable_registry("run-1")) as client:
+        recs = client.post("/recommend", json={"sliders": {"energy": 0.9}, "k": 2}).json()
+    assert all(r["why"] == [] for r in recs["recommendations"])
+
+
+# --- Pipeline view (D34) --------------------------------------------------------------
+
+DVC_YAML = """
+stages:
+  make_batches:
+    cmd: python -m spatify.batches
+    deps: [data/raw/tracks.csv, src/spatify/batches.py]
+    outs: [data/base]
+  ingest:
+    cmd: python -m spatify.pipeline.ingest
+    deps: [data/base, data/incoming, src/spatify/pipeline/ingest.py]
+    outs: [data/ingested]
+    metrics:
+    - metrics/ingest.json:
+        cache: false
+  features:
+    cmd: python -m spatify.pipeline.features
+    deps: [data/ingested]
+    outs: [data/features]
+  evaluate:
+    cmd: mlflow run . -e evaluate
+    deps: [data/features]
+    metrics:
+    - metrics/evaluate.json:
+        cache: false
+  register:
+    cmd: mlflow run . -e register
+    deps: [metrics/evaluate.json]
+"""
+
+
+@pytest.fixture
+def pipeline_dir(tmp_path):
+    (tmp_path / "dvc.yaml").write_text(DVC_YAML)
+    (tmp_path / "dvc.lock").write_text(
+        "schema: '2.0'\nstages:\n  make_batches: {}\n  ingest: {}\n  features: {}\n"
+    )
+    (tmp_path / "metrics").mkdir()
+    (tmp_path / "metrics/ingest.json").write_text(
+        json.dumps({"rows": 79970, "seconds": 2.0, "rows_per_s": 39985.0, "files": 1})
+    )
+    return tmp_path
+
+
+def dag_client(pipeline_dir, store=None) -> TestClient:
+    settings = Settings(pipeline_dir=str(pipeline_dir), refresh_seconds=3600)
+    registry = Registry("http://mlflow:5000", "spatify", client=StubMlflowClient())
+    app = create_app(
+        settings, store=store or FakeStore(), registry=registry, model=FakeModelServer().client
+    )
+    return TestClient(app)
+
+
+def test_pipeline_dag_follows_the_data(pipeline_dir):
+    with dag_client(pipeline_dir) as client:
+        dag = client.get("/pipeline/dag").json()
+    assert [s["name"] for s in dag["stages"]] == [
+        "make_batches", "ingest", "features", "evaluate", "register"
+    ]  # fmt: skip
+    edges = {tuple(e) for e in dag["edges"]}
+    assert ("make_batches", "ingest") in edges
+    assert ("evaluate", "register") in edges  # through metrics/evaluate.json
+    assert ("data/incoming", "ingest") in edges  # an input no stage produces
+    assert dag["inputs"] == ["data/incoming", "data/raw/tracks.csv"]  # code deps left out
+    status = {s["name"]: s["status"] for s in dag["stages"]}
+    assert status == {
+        "make_batches": "ok", "ingest": "ok", "features": "ok",
+        "evaluate": "not run", "register": "not run",
+    }  # fmt: skip
+    ingest = next(s for s in dag["stages"] if s["name"] == "ingest")
+    assert ingest["metrics"]["rows_per_s"] == 39985.0 and "files" not in ingest["metrics"]
+
+
+def test_the_workers_report_overrides_dvc_lock(pipeline_dir):
+    store = FakeStore()
+    run = store.request_pipeline_run("manual")
+    run["stages"] = {"features": {"status": "failed", "seconds": 3.1}}
+    with dag_client(pipeline_dir, store) as client:
+        dag = client.get("/pipeline/dag").json()
+    assert {s["name"]: s["status"] for s in dag["stages"]}["features"] == "failed"
+
+
+def test_pipeline_dag_without_the_mount_is_503(tmp_path):
+    with dag_client(tmp_path / "missing") as client:
+        assert client.get("/pipeline/dag").status_code == 503

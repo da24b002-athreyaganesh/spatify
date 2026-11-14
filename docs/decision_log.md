@@ -174,3 +174,31 @@ One entry per design decision: what was chosen, why, and what else was considere
   - `tests/test_pipeline.py` checks the same thing on a small catalogue.
 - **Limit:** file boundaries follow Ray's blocks, and the number of blocks depends on the CPU cap (the features stage uses one block per CPU, D30). So a run with a different `SPATIFY_RAY_CPUS` gets a different hash for the same data; reruns with the same settings get the same one.
 - **Considered:** writing one file per stage (`repartition(1)`). That would make the hash independent of the CPU count, but it funnels all the data through a single task, against the point of a Ray pipeline.
+
+## D32. The frontend: Streamlit, talking only to the gateway
+- **Pages:** *Discover* for listeners, the *Operator console*, and *Help*, the in-app user manual. Streamlit, as in A4 and the problem statement, served from its own container on 8501. It reaches the backend only through the gateway's REST API, at `API_BASE_URL` (`spatify.frontend.api`). Its image has neither MLflow nor FastAPI, so it couldn't take a shortcut if it tried.
+- **Discover:**
+  - Start from a song (search, then pick), from sliders, or both.
+  - Each slider has a switch, so an unset feature stays unset (D19), and the six intuitive features come first with the rest under *More options*. The button stays disabled until a song or a slider is chosen.
+  - Each suggestion shows its similarity, its "why" labels (D33), and Like and Skip buttons. These send `/feedback` and grey out once used, so a click can't be sent twice.
+  - The list says which model version chose it.
+- **Foolproofing:** every gateway failure becomes a message saying what to do ("try again in a few seconds", "check the spelling"), never a stack trace. Song titles are escaped, so Markdown characters in them can't break the page. Search requires two letters.
+- **The admin key:** rollback and pipeline runs need it, and the operator types it into the console's sidebar. It stays in that browser session; the frontend's container never holds it. D28 had planned to give the container the key, but then anyone who could open the console could roll back models.
+- **Metrics:** prometheus_client serves `/metrics` on its own port, 9101, as in A4, using A4's guard against Streamlit re-importing modules. They count page views, gateway calls by endpoint and outcome, gateway latency as the user sees it, like and skip clicks, and the error messages shown.
+- **Charts:** they follow A4's "7 Commandments": a title, a one-line description, axes named with units and scale, a legend whenever colour means something, and the Okabe-Ito palette.
+- **Tests:** Streamlit's AppTest runs every page headlessly against a fake gateway and checks both what the page shows and what it sends (`tests/test_frontend.py`).
+
+## D33. "Why" labels: each feature's exact share of the score
+- **How:** the score is a cosine similarity, a sum over features of (query × track), both as weighted z-scores of length 1. So each feature's product is its exact share of the score. The labels name the features with the largest positive shares, at most three and at least 5% of the score each. Those are the features where the query and the track are both well above, or both well below, the average track ("energetic", "acoustic", "minor key"). A slider-only query is explained only by the sliders set, since unset features sit at the mean and contribute nothing.
+- **Where:** the gateway computes them with the champion's own scaler, weights and catalogue, read from the files packaged in the model version (`spatify.model.explain`). The labels therefore describe the model that answered. If another model answered (the champion has just changed and the gateway hasn't reloaded yet), the gateway gives no labels rather than wrong ones.
+- **Considered:** returning the labels from the model server, which would change the served model and its DVC stage (and so retrain it); or labels based only on closeness, which can name features that barely affect the ranking.
+
+## D34. The console's pipeline view comes from DVC's own files
+- **How:** the gateway mounts `dvc.yaml`, `dvc.lock` and `metrics/` read-only, and serves `/pipeline/dag`:
+  - **Stages:** in `dvc.yaml` order.
+  - **Edges:** wherever one stage's output (or metrics file) is another's input.
+  - **Inputs:** the data that no stage produces (the raw CSV and the incoming-batch folder).
+  - **Throughput:** each stage's rows and rows per second, from its metrics file.
+  The diagram matches `dvc dag`.
+- **Colours:** a stage's last result comes from the latest run the worker recorded, once Phase 5's worker reports results per stage. Until then a stage recorded in `dvc.lock` counts as last run successfully, and one missing from it as never run.
+- **Considered:** running `dvc dag --dot` inside the gateway, which would put DVC and the whole repo into the gateway image.

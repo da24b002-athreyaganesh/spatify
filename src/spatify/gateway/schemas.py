@@ -60,6 +60,10 @@ class Track(BaseModel):
 class Recommendation(Track):
     rank: int
     score: float = Field(description="Cosine similarity to the query, -1 to 1")
+    why: list[str] = Field(
+        default_factory=list,
+        description="Traits shared with the query that add most to the score, strongest first",
+    )
 
 
 class RecommendResponse(BaseModel):
@@ -139,6 +143,19 @@ class PipelineRun(BaseModel):
 class PipelineStatus(BaseModel):
     latest: PipelineRun | None
     counts: dict[str, int] = Field(description="Runs per status")
+
+
+class StageView(BaseModel):
+    name: str
+    status: str = Field(description="ok, failed, running or not run: the stage's last result")
+    command: str
+    metrics: dict[str, float] = Field(description="Rows, seconds, rows per second, ...")
+
+
+class PipelineDag(BaseModel):
+    stages: list[StageView] = Field(description="In dvc.yaml order")
+    inputs: list[str] = Field(description="Data the pipeline reads but no stage produces")
+    edges: list[tuple[str, str]] = Field(description="(from, to): stage or input to stage")
 
 
 class TriggerRequest(BaseModel):

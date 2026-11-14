@@ -2,7 +2,8 @@
 
 Listener endpoints:  POST /recommend, POST /feedback, GET /tracks/search
 Operator endpoints:  GET /models, POST /models/rollback*, GET /pipeline/status,
-                     GET /pipeline/runs, POST /pipeline/trigger*, GET /drift
+                     GET /pipeline/runs, GET /pipeline/dag, POST /pipeline/trigger*,
+                     GET /drift
 Service endpoints:   GET /health (503 until Postgres and the model server answer), GET /metrics
 * needs the admin key in the X-API-Key header.
 
@@ -22,6 +23,7 @@ import math
 import threading
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import uuid4
 
 import psycopg
@@ -46,6 +48,7 @@ from spatify.gateway.model_client import (
     ModelServerUnavailableError,
     QueryRejectedError,
 )
+from spatify.gateway.pipeline_view import PipelineUnavailableError, load_dag
 from spatify.gateway.registry import Registry, RegistryError
 from spatify.gateway.schemas import (
     FeedbackRequest,
@@ -53,6 +56,7 @@ from spatify.gateway.schemas import (
     Health,
     ModelsResponse,
     ModelVersion,
+    PipelineDag,
     PipelineRun,
     PipelineStatus,
     Recommendation,
@@ -201,6 +205,12 @@ def create_app(
     def registry_conflict(request: Request, exc: RegistryError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=409)
 
+    @app.exception_handler(PipelineUnavailableError)
+    def pipeline_missing(request: Request, exc: PipelineUnavailableError) -> JSONResponse:
+        log.warning("Pipeline view unavailable: %s", exc)
+        detail = "The pipeline definition isn't available to the gateway (PIPELINE_DIR)"
+        return JSONResponse({"detail": detail}, status_code=503)
+
     @app.exception_handler(MlflowException)
     def registry_down(request: Request, exc: MlflowException) -> JSONResponse:
         log.warning("MLflow error: %s", exc)
@@ -234,13 +244,16 @@ def create_app(
             request_id, body.track_id, sliders, body.k, version, run_id, track_ids
         )
         RECOMMENDATIONS.labels(str(version)).inc()
+        why = registry.why(record, track_ids, run_id)
         return RecommendResponse(
             request_id=request_id,
             model_version=version,
             model_run_id=run_id,
             recommendations=[
-                Recommendation(**_track(r), rank=int(r["rank"]), score=float(r["score"]))
-                for r in rows
+                Recommendation(
+                    **_track(r), rank=int(r["rank"]), score=float(r["score"]), why=labels
+                )
+                for r, labels in zip(rows, why, strict=True)
             ],
         )
 
@@ -322,6 +335,16 @@ def create_app(
     def pipeline_runs(limit: int = Query(20, ge=1, le=200)) -> list[dict]:
         """Recent pipeline runs, newest first."""
         return store.pipeline_runs(limit)
+
+    @app.get("/pipeline/dag", response_model=PipelineDag, tags=["operator"])
+    def pipeline_dag() -> dict:
+        """The DVC pipeline: stages, data flow, each stage's last result and throughput."""
+        try:
+            runs = store.pipeline_runs(1)
+        except Exception:  # the diagram is still useful without the run history
+            log.warning("Couldn't read the latest pipeline run", exc_info=True)
+            runs = []
+        return load_dag(Path(settings.pipeline_dir), runs[0] if runs else None)
 
     @app.get("/pipeline/status", response_model=PipelineStatus, tags=["operator"])
     def pipeline_status() -> PipelineStatus:
