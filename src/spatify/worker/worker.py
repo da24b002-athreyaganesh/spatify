@@ -7,7 +7,14 @@
    `dvc add data/incoming`, then `dvc repro drift_check` (ingest, validate, drift check).
    Retrain only if a new batch has drifted (trigger "drift"); otherwise the data is
    recorded and the model left alone, as the problem statement's FR5 asks.
-3. Otherwise, nothing.
+3. Otherwise, if `feedback.retrain_every` likes and skips have arrived since the last
+   snapshot: retrain (trigger "feedback", D37).
+4. Otherwise, nothing.
+
+Every retrain first exports all feedback to data/feedback/feedback.parquet and runs
+`dvc add data/feedback`, so each model is traced to the exact likes and skips it learned
+from. After a promotion the worker waits until the model server answers with the new
+model and records how long that took (retrain-to-redeploy time, D37).
 
 A failed run leaves the champion serving: only the register stage can move the alias,
 and it never runs after a failed stage. A batch that validation rejects is moved to
@@ -23,9 +30,14 @@ import logging
 import os
 import shutil
 import time
+import urllib.request
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import pandas as pd
+import pyarrow.parquet as pq
+import yaml
 
 from spatify.worker import metrics
 from spatify.worker.runner import DvcResult, run_dvc
@@ -34,6 +46,13 @@ log = logging.getLogger("spatify.worker")
 
 INCOMING = Path("data/incoming")
 QUARANTINE = Path("data/quarantine")
+FEEDBACK = Path("data/feedback")
+SNAPSHOT = FEEDBACK / "feedback.parquet"
+SNAPSHOT_TYPES = {
+    "request_id": "string", "created_at": "datetime64[us, UTC]", "seed_track_id": "string",
+    "sliders": "string", "track_id": "string", "rank": "Int64", "action": "string",
+    "explored": "boolean", "model_version": "Int64",
+}  # fmt: skip
 
 
 @dataclass
@@ -56,9 +75,11 @@ class Worker:
         store,
         dvc: Callable[[list[str], Path, Mapping[str, str]], DvcResult] = run_dvc,
         env: Mapping[str, str] | None = None,
+        served: Callable[[str], float | None] | None = None,
     ) -> None:
         self.repo, self.store, self.dvc = repo, store, dvc
         self.env = dict(os.environ if env is None else env)
+        self.served = served or self.wait_until_served
         self.last_failed = False  # the main loop waits a full poll after a failed run
 
     def step(self) -> bool:
@@ -66,13 +87,62 @@ class Worker:
         metrics.QUEUE.set(self.store.queue_length())
         run = self.store.claim_requested()
         if run is not None:
-            self.handle(run, self.incoming_changes(), requested=True)
+            self.handle(run, self.incoming_changes(), retrain=True)
             return True
         changes = self.incoming_changes()
         if changes:
-            self.handle(self.store.start_run("new_data"), changes, requested=False)
+            self.handle(self.store.start_run("new_data"), changes, retrain=False)
+            return True
+        pending = self.store.feedback_count() - self.snapshot_rows()
+        metrics.FEEDBACK_PENDING.set(pending)
+        if pending >= self.param("feedback", "retrain_every", 2000):
+            self.handle(self.store.start_run("feedback"), Changes(), retrain=True)
             return True
         return False
+
+    def param(self, section: str, key: str, default):
+        """A setting from the repo's params.yaml, read fresh so edits apply at once."""
+        try:
+            return yaml.safe_load((self.repo / "params.yaml").read_text())[section][key]
+        except (OSError, KeyError, TypeError):
+            return default
+
+    def snapshot_rows(self) -> int:
+        try:
+            return pq.ParquetFile(self.repo / SNAPSHOT).metadata.num_rows
+        except (OSError, ValueError):
+            return 0
+
+    def export_feedback(self) -> int:
+        """Write every like and skip to the snapshot and version it with DVC."""
+        events = pd.DataFrame(self.store.export_feedback(), columns=list(SNAPSHOT_TYPES))
+        (self.repo / FEEDBACK).mkdir(exist_ok=True)
+        events.astype(SNAPSHOT_TYPES).to_parquet(self.repo / SNAPSHOT, index=False)
+        added = self.dvc(["add", str(FEEDBACK)], self.repo, self.env)
+        if not added.ok:
+            raise RuntimeError(f"dvc add data/feedback failed: {error_line(added.tail)}")
+        return len(events)
+
+    def wait_until_served(self, run_id: str, timeout: float = 180) -> float | None:
+        """Seconds until the model server answers with the model from `run_id` (None: never)."""
+        url = self.env.get("MODEL_SERVER_URL")
+        if not url:
+            return None
+        body = json.dumps({"dataframe_records": [{"energy": 0.5}], "params": {"k": 1}}).encode()
+        start = time.monotonic()
+        while time.monotonic() - start < timeout:
+            try:
+                request = urllib.request.Request(
+                    f"{url}/invocations", body, {"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    answer = json.load(response)["predictions"][0]["model_run_id"]
+                if answer == run_id:
+                    return round(time.monotonic() - start, 1)
+            except Exception:  # the server is restarting; keep asking
+                pass
+            time.sleep(1)
+        return None
 
     def incoming_changes(self) -> Changes:
         """Batch files that are new, changed or still waiting, and ones that were removed."""
@@ -89,7 +159,7 @@ class Worker:
         ]  # fmt: skip
         return changes
 
-    def handle(self, run: dict, changes: Changes, requested: bool) -> None:
+    def handle(self, run: dict, changes: Changes, retrain: bool) -> None:
         trigger, run_id = run["trigger"], run["id"]
         start, stages, notes = time.monotonic(), {}, []
         status, version, promoted = "succeeded", None, None
@@ -112,19 +182,23 @@ class Worker:
             drifted = self.record_drift(run_id, changes)
 
             # Retrain?
-            if not (requested or drifted):
+            if not (retrain or drifted):
                 notes.append(
                     f"Checked {', '.join(changes.new)}: no drift, so the model wasn't retrained."
                     if changes.new
                     else "Brought the data stages up to date; no new batches."
                 )
                 return
-            if drifted and not requested:
+            if drifted and not retrain:
                 trigger = "drift"
                 self.store.update_run(run_id, trigger=trigger)
                 notes.append(f"Drift in {', '.join(drifted)}, so the model was retrained.")
+            if trigger == "feedback":
+                notes.append("Enough new likes and skips arrived, so the model was retrained.")
+            exported = self.export_feedback()
+            notes.append(f"Training saw {exported:,} likes and skips.")
             full = self.repro(["repro"], stages, trigger)
-            if full.ok and requested and stages.get("train", {}).get("status") != "ok":
+            if full.ok and retrain and stages.get("train", {}).get("status") != "ok":
                 full = self.repro(["repro", "--force", "--downstream", "train"], stages, trigger)
             if not full.ok:
                 status = "failed"
@@ -135,12 +209,16 @@ class Worker:
             if stages.get("register", {}).get("status") == "ok":
                 result = self.read_json("metrics/register.json") or {}
                 version, promoted = result.get("version"), result.get("promoted")
+                metric = result.get("metric", "genre_match_at_k")
                 notes.append(
-                    f"Registered version {version}: promoted to champion."
+                    f"Registered version {version} ({result.get('variant')}): promoted on {metric}."
                     if promoted
-                    else f"Registered version {version}: not promoted (gain {result.get('gain')}); "
-                    f"version {result.get('champion_version')} keeps serving."
+                    else f"Registered version {version}: not promoted on {metric} "
+                    f"(gain {result.get('gain')}); version {result.get('champion_version')} "
+                    "keeps serving."
                 )
+                if promoted:
+                    notes.append(self.record_redeploy(result, stages, start))
         except Exception as err:  # record any surprise as a failed run; keep the worker alive
             log.exception("Run %s failed", run_id)
             status = "failed"
@@ -160,6 +238,21 @@ class Worker:
             metrics.LAST_RUN_OK.set(1 if status == "succeeded" else 0)
             metrics.LAST_RUN_TIME.set(time.time())
             log.info("Run %s (%s) %s in %.0f s. %s", run_id, trigger, status, seconds, message)
+
+    def record_redeploy(self, result: dict, stages: dict, start: float) -> str:
+        """Wait for the new champion to answer; record retrain-to-redeploy time (D37)."""
+        candidates = (self.read_json("models/candidates.json") or {}).get("candidates", [])
+        run_id = next(
+            (c["run_id"] for c in candidates if c["variant"] == result.get("variant")), None
+        )
+        waited = self.served(run_id) if run_id else None
+        if waited is None:
+            stages["serving"] = {"status": "failed"}
+            return "The model server hadn't switched to it within 3 minutes."
+        total = round(time.monotonic() - start, 1)
+        stages["serving"] = {"status": "ok", "seconds": waited}
+        metrics.RETRAIN_TO_REDEPLOY.observe(total)
+        return f"Serving it {waited:.0f} s after registration, {total:.0f} s after the run began."
 
     def repro(self, args: list[str], stages: dict, trigger: str) -> DvcResult:
         """Run a dvc command with the run's trigger, and merge its stage results into `stages`.

@@ -132,6 +132,10 @@ if result:
                 st.caption((f"{genres} · " if genres else "") + f"similarity {rec['score']:.2f}")
                 if rec.get("why"):
                     st.markdown("**Why:** " + ", ".join(rec["why"]))
+                elif rec.get("explored"):
+                    st.markdown(
+                        "**A wildcard:** something different, to learn more about your taste"
+                    )
             with buttons:
                 like, skip = st.columns(2)
                 like.button(

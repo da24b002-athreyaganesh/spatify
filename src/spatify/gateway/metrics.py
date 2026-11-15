@@ -56,3 +56,13 @@ DB_ERRORS = Counter(
     "spatify_feedback_store_errors_total", "Failed feedback-store queries", ["operation"]
 )
 CHAMPION = Info("spatify_champion", "The registry's champion model, as last seen")
+
+EXPLORED = Counter("spatify_explored_slots_total", "List slots given to random tracks (D37)")
+LIKE_RATE = Gauge(
+    "spatify_feedback_like_rate",
+    "Like rate of the latest likes and skips (recent) and of the ones before them (baseline)",
+    ["window"],
+)
+FEEDBACK_DRIFT = Gauge(
+    "spatify_feedback_drift", "1 if the like rate has dropped by the threshold or more, else 0"
+)

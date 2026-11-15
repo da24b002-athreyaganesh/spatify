@@ -76,6 +76,19 @@ class WorkerStore:
             (*values.values(), run_id),
         )
 
+    def feedback_count(self) -> int:
+        return self._run("SELECT count(*) AS n FROM feedback", fetch="one")["n"]
+
+    def export_feedback(self) -> list[dict]:
+        """Every like and skip with its list's query, oldest first (the snapshot, D37)."""
+        return self._run(
+            "SELECT f.request_id::text AS request_id, f.created_at, r.seed_track_id,"
+            " r.sliders::text AS sliders, f.track_id, f.rank, f.action,"
+            " (f.track_id = ANY(r.explored)) AS explored, f.model_version"
+            " FROM feedback f JOIN recommendations r USING (request_id) ORDER BY f.id",
+            fetch="all",
+        )
+
     def queue_length(self) -> int:
         row = self._run(
             "SELECT count(*) AS n FROM pipeline_runs WHERE status = 'requested'", fetch="one"

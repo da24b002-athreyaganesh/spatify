@@ -155,9 +155,9 @@ stages:
     deps:
     - path: data/validated
       hash: md5
-      md5: 3bb18abe5c01264434ae718c558e028b.dir
-      size: 8710112
-      nfiles: 9
+      md5: 28bfc2cc89ef835be369b775b69dc1c8.dir
+      size: 11651141
+      nfiles: 14
     - path: src/spatify/pipeline/common.py
       hash: md5
       md5: de378cb9e228ef9e16f322ed453a2008
@@ -191,12 +191,12 @@ stages:
     outs:
     - path: data/features
       hash: md5
-      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
-      size: 10317796
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
     - path: metrics/features.json
       hash: md5
-      md5: 943de2c59d0ac5d9064474f751f50b70
+      md5: 46339827e56909267fd82cf9fdcbdd76
       size: 142
   eda:
     cmd: python scripts/eda.py
@@ -241,9 +241,14 @@ stages:
       size: 648
     - path: data/features
       hash: md5
-      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
-      size: 10317796
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
+    - path: data/feedback
+      hash: md5
+      md5: 31e193cfae7d3b9b870cd942996e7db6.dir
+      size: 116215
+      nfiles: 1
     - path: python_env.yaml
       hash: md5
       md5: ccf4245d53748c4e1f7a2c278801e14d
@@ -252,10 +257,14 @@ stages:
       hash: md5
       md5: 9f13bfb084894565a0538e412e71734e
       size: 1815
+    - path: src/spatify/model/feedback.py
+      hash: md5
+      md5: 8a8acd69286d2513ca9e478a8e5f4c3c
+      size: 7091
     - path: src/spatify/model/plots.py
       hash: md5
-      md5: 44f8748695376bd7ffa8dd8f17f78a61
-      size: 2809
+      md5: ef23e79c057a4ecf4c7f775d4d4c7637
+      size: 4922
     - path: src/spatify/model/pyfunc.py
       hash: md5
       md5: ed74ed643651f6ec5f20748c586c5ca1
@@ -270,8 +279,8 @@ stages:
       size: 2665
     - path: src/spatify/model/train.py
       hash: md5
-      md5: 29da237b2b76862fa4797e2f93bd1ac4
-      size: 7529
+      md5: 395fb93369a1a6b6bb790a28f670063e
+      size: 9528
     params:
       params.yaml:
         features.columns:
@@ -287,6 +296,14 @@ stages:
         - mode
         - key_sin
         - key_cos
+        feedback:
+          path: data/feedback/feedback.parquet
+          test_fraction: 0.2
+          min_events: 1000
+          min_test_lists: 30
+          k: 3
+          c: 1.0
+          retrain_every: 2000
         split:
           seed: 42
           eval_fraction: 0.1
@@ -306,101 +323,140 @@ stages:
     outs:
     - path: models/candidates.json
       hash: md5
-      md5: aec7e71093c574a164054bb9a99b123b
-      size: 1463
+      md5: 67de5a6a24e9c3b0eaad747636742dcf
+      size: 1684
   evaluate:
     cmd: mlflow run . -e evaluate --env-manager=local --experiment-name spatify
       --run-name evaluate
     deps:
     - path: data/features
       hash: md5
-      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
-      size: 10317796
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
+    - path: data/feedback
+      hash: md5
+      md5: 31e193cfae7d3b9b870cd942996e7db6.dir
+      size: 116215
+      nfiles: 1
     - path: models/candidates.json
       hash: md5
-      md5: aec7e71093c574a164054bb9a99b123b
-      size: 1463
+      md5: 67de5a6a24e9c3b0eaad747636742dcf
+      size: 1684
     - path: src/spatify/model/data.py
       hash: md5
       md5: 9f13bfb084894565a0538e412e71734e
       size: 1815
     - path: src/spatify/model/evaluate.py
       hash: md5
-      md5: fce0d16a8f2c6c871055734dc39acb0e
-      size: 6650
+      md5: 4cbaba524d79ae8539c212e17cea80a4
+      size: 9327
+    - path: src/spatify/model/feedback.py
+      hash: md5
+      md5: 8a8acd69286d2513ca9e478a8e5f4c3c
+      size: 7091
     - path: src/spatify/model/plots.py
       hash: md5
-      md5: 44f8748695376bd7ffa8dd8f17f78a61
-      size: 2809
+      md5: ef23e79c057a4ecf4c7f775d4d4c7637
+      size: 4922
     params:
       params.yaml:
         evaluate:
           k: 10
           queries: 2000
           seed: 42
+        feedback:
+          path: data/feedback/feedback.parquet
+          test_fraction: 0.2
+          min_events: 1000
+          min_test_lists: 30
+          k: 3
+          c: 1.0
+          retrain_every: 2000
         split:
           seed: 42
           eval_fraction: 0.1
     outs:
     - path: metrics/evaluate.json
       hash: md5
-      md5: 8858f876cf467f477179ae917a7bbc0e
-      size: 1430
+      md5: df089831308e27dfa0ea5fbae7ddc222
+      size: 2862
+    - path: reports/evaluate/feedback.png
+      hash: md5
+      md5: 09d74e25474b4d98b0bf3d856e1192e8
+      size: 53984
     - path: reports/evaluate/variants.csv
       hash: md5
-      md5: 40ff5662a80585934eb1a964bd00e5be
-      size: 493
+      md5: 24a6413ac655d9a5d1d5ea7bf13453cb
+      size: 679
     - path: reports/evaluate/variants.png
       hash: md5
-      md5: 7fcf5d5670081a537d9bbb8f6a8be746
-      size: 48813
+      md5: e1a1683db52e59b23ca79d7c056028ad
+      size: 53088
   register:
     cmd: mlflow run . -e register --env-manager=local --experiment-name spatify
       --run-name register
     deps:
     - path: data/features
       hash: md5
-      md5: c1c888f0ef6c54767c4f63eef8a0fba0.dir
-      size: 10317796
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
+    - path: data/feedback
+      hash: md5
+      md5: 31e193cfae7d3b9b870cd942996e7db6.dir
+      size: 116215
+      nfiles: 1
     - path: metrics/evaluate.json
       hash: md5
-      md5: 8858f876cf467f477179ae917a7bbc0e
-      size: 1430
+      md5: df089831308e27dfa0ea5fbae7ddc222
+      size: 2862
     - path: models/candidates.json
       hash: md5
-      md5: aec7e71093c574a164054bb9a99b123b
-      size: 1463
+      md5: 67de5a6a24e9c3b0eaad747636742dcf
+      size: 1684
     - path: src/spatify/model/data.py
       hash: md5
       md5: 9f13bfb084894565a0538e412e71734e
       size: 1815
     - path: src/spatify/model/evaluate.py
       hash: md5
-      md5: fce0d16a8f2c6c871055734dc39acb0e
-      size: 6650
+      md5: 4cbaba524d79ae8539c212e17cea80a4
+      size: 9327
+    - path: src/spatify/model/feedback.py
+      hash: md5
+      md5: 8a8acd69286d2513ca9e478a8e5f4c3c
+      size: 7091
     - path: src/spatify/model/register.py
       hash: md5
-      md5: e35526130432bf411c598f712c3354d9
-      size: 7945
+      md5: 9488cfa9aa25e4fedba7f8dace05c689
+      size: 9512
     params:
       params.yaml:
         evaluate:
           k: 10
           queries: 2000
           seed: 42
+        feedback:
+          path: data/feedback/feedback.parquet
+          test_fraction: 0.2
+          min_events: 1000
+          min_test_lists: 30
+          k: 3
+          c: 1.0
+          retrain_every: 2000
         register:
           model_name: spatify
           min_gain: 0.005
+          min_gain_feedback: 0.01
         split:
           seed: 42
           eval_fraction: 0.1
     outs:
     - path: metrics/register.json
       hash: md5
-      md5: 7788a56dddb1b7d7c9f293e87ddd601b
-      size: 271
+      md5: ede30687edaa494ec70e308c49339b04
+      size: 288
   drift_check:
     cmd: python -m spatify.pipeline.drift
     deps:

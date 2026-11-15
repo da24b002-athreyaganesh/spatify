@@ -39,6 +39,8 @@ st.markdown(
 - **Similarity** runs from -1 to 1; the closer to 1, the closer the song is to what you asked for.
 - **Why** names what the suggestion shares with your song or your sliders, strongest first:
   for example *energetic, danceable*. These are the features that add most to its similarity.
+- A **wildcard** is a song picked at random, about one in ten. Liking or skipping it teaches
+  Spatify about songs it wouldn't have chosen for you.
 - Each list says which **model version** chose it, so the team can see which version you liked.
 """
 )

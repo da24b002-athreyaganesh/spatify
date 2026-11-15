@@ -9,18 +9,20 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import tempfile
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
 import mlflow
+import numpy as np
 import pandas as pd
 from mlflow import MlflowClient
 from mlflow.exceptions import MlflowException
 
 from spatify.model.explain import explain
-from spatify.model.recommender import QueryError, Recommender
+from spatify.model.recommender import DETAILS, QueryError, Recommender
 
 log = logging.getLogger(__name__)
 
@@ -128,6 +130,37 @@ class Registry:
             return explain(explainer, pd.DataFrame([query]), track_ids)
         except QueryError:
             return [[] for _ in track_ids]
+
+    def explore(self, n: int, exclude: set, rng: random.Random | None = None) -> list[dict]:
+        """`n` random tracks from the champion's catalogue, none of them in `exclude` (D37)."""
+        with self._lock:
+            catalogue = self.catalogue
+        if catalogue is None or n <= 0:
+            return []
+        rng, exclude, picks = rng or random.Random(), set(exclude), []
+        for _ in range(20 * n):
+            row = catalogue.iloc[rng.randrange(len(catalogue))]
+            if row["track_id"] not in exclude:
+                picks.append({key: row[key] for key in DETAILS})
+                exclude.add(row["track_id"])
+                if len(picks) == n:
+                    break
+        return picks
+
+    def similarity(self, query: dict, track_ids: list[str], run_id: str) -> list[float]:
+        """Cosine similarity of tracks to the query, as the answering model scores them."""
+        with self._lock:
+            explainer, loaded_run = self._explainer, self._explainer_run
+        if explainer is None or loaded_run != run_id:
+            return [0.0 for _ in track_ids]
+        try:
+            raw, _ = explainer.query_features(pd.DataFrame([query]))
+        except QueryError:
+            return [0.0 for _ in track_ids]
+        vector = explainer.transform(raw)[0]
+        vector = vector / max(float(np.linalg.norm(vector)), 1e-12)
+        positions = explainer.positions.get_indexer([str(t) for t in track_ids])
+        return [round(float(explainer.matrix[p] @ vector), 4) if p >= 0 else 0.0 for p in positions]
 
     def search(self, query: str, limit: int) -> tuple[int, pd.DataFrame] | None:
         """Tracks whose title or artist contains the query; title-prefix matches first."""

@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from spatify.model.data import eval_mask, load_tracks
+from spatify.model.feedback import fit_weights, load_events, split_by_time
 from spatify.model.plots import plt, weights_figure
 from spatify.model.pyfunc import log_candidate
 from spatify.model.recommender import DETAILS, Recommender, fisher_weights
@@ -102,6 +103,75 @@ def log_lineage(features_dir: Path, tracks: pd.DataFrame, fit: np.ndarray, tags:
                     mlflow.log_metric(f"data.{stage}.{name}", values[name])
 
 
+def log_variant(
+    name: str,
+    feature_set: str,
+    weighting: str,
+    recommender: Recommender,
+    k: int,
+    split: dict,
+    tags: dict,
+    extra: dict | None = None,
+) -> dict:
+    """Log one candidate as a nested run with its weights and model; its candidates.json entry."""
+    cols = recommender.columns
+    with mlflow.start_run(run_name=name, nested=True) as run:
+        mlflow.set_tags({**tags, "stage": "train", "variant": name})
+        mlflow.log_params(
+            {
+                "variant": name,
+                "feature_set": feature_set,
+                "weighting": weighting,
+                "n_features": len(cols),
+                "features": ",".join(cols),
+                "k": k,
+                "split_seed": split["seed"],
+                "eval_fraction": split["eval_fraction"],
+                **(extra or {}),
+            }
+        )
+        weights = dict(zip(cols, recommender.weights.round(4).tolist(), strict=True))
+        mlflow.log_dict(weights, "weights.json")
+        if weighting != "uniform":
+            source = "likes and skips" if weighting == "feedback" else "genre separation"
+            fig = weights_figure(cols, recommender.weights, name, source)
+            mlflow.log_figure(fig, "weights.png")
+            plt.close(fig)
+        info = {
+            "run_id": run.info.run_id,
+            "variant": name,
+            "dataset_version": tags["dataset_version"],
+        }
+        model_info = log_candidate(recommender, info, k)
+    log.info("Logged candidate %s (run %s)", name, run.info.run_id)
+    return {
+        "variant": name,
+        "feature_set": feature_set,
+        "weighting": weighting,
+        "run_id": run.info.run_id,
+        "model_uri": model_info.model_uri,
+    }
+
+
+def feedback_candidate(
+    tracks: pd.DataFrame, columns: list[str], scaler: dict, fit: np.ndarray, cfg: dict
+) -> tuple[Recommender | None, dict]:
+    """The model whose weights come from likes and skips (D37), if there are enough of them.
+
+    It uses every feature; the weights are fitted on the earlier lists only, so the
+    evaluate stage can judge it on the latest ones.
+    """
+    events = load_events(Path(cfg["path"]))
+    train_events, _ = split_by_time(events, cfg["test_fraction"])
+    base = build(tracks, columns, scaler, "uniform", fit)
+    weights, report = fit_weights(base, train_events, cfg["min_events"], cfg["c"])
+    report["snapshot_events"] = len(events)
+    if weights is None:
+        return None, report
+    catalogue = tracks[DETAILS + columns]
+    return Recommender(catalogue, columns, base.mean, base.std, weights), report
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Build and log the candidate models.")
     parser.add_argument("--data", type=Path, default=Path("data/features"))
@@ -109,7 +179,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     setup_logging()
     columns = load_params("features")["columns"]
-    split, cfg = load_params("split"), load_params("train")
+    split, cfg, fb = load_params("split"), load_params("train"), load_params("feedback")
 
     tracks = load_tracks(args.data / "tracks")
     scaler = json.loads((args.data / "scaler.json").read_text())
@@ -121,42 +191,27 @@ def main(argv: list[str] | None = None) -> None:
         mlflow.log_params({"split_seed": split["seed"], "eval_fraction": split["eval_fraction"]})
         for name, feature_set, weighting, cols in variants(cfg, columns):
             recommender = build(tracks, cols, scaler, weighting, fit)
-            with mlflow.start_run(run_name=name, nested=True) as run:
-                mlflow.set_tags({**tags, "stage": "train", "variant": name})
-                mlflow.log_params(
-                    {
-                        "variant": name,
-                        "feature_set": feature_set,
-                        "weighting": weighting,
-                        "n_features": len(cols),
-                        "features": ",".join(cols),
-                        "k": cfg["k"],
-                        "split_seed": split["seed"],
-                        "eval_fraction": split["eval_fraction"],
-                    }
-                )
-                weights = dict(zip(cols, recommender.weights.round(4).tolist(), strict=True))
-                mlflow.log_dict(weights, "weights.json")
-                if weighting != "uniform":
-                    fig = weights_figure(cols, recommender.weights, name)
-                    mlflow.log_figure(fig, "weights.png")
-                    plt.close(fig)
-                info = {
-                    "run_id": run.info.run_id,
-                    "variant": name,
-                    "dataset_version": tags["dataset_version"],
-                }
-                model_info = log_candidate(recommender, info, cfg["k"])
             candidates.append(
-                {
-                    "variant": name,
-                    "feature_set": feature_set,
-                    "weighting": weighting,
-                    "run_id": run.info.run_id,
-                    "model_uri": model_info.model_uri,
-                }
+                log_variant(name, feature_set, weighting, recommender, cfg["k"], split, tags)
             )
-            log.info("Logged candidate %s (run %s)", name, run.info.run_id)
+
+        recommender, report = feedback_candidate(tracks, columns, scaler, fit, fb)
+        mlflow.log_dict(report, "feedback_report.json")
+        mlflow.log_metric("feedback.snapshot_events", report["snapshot_events"])
+        if recommender is None:
+            log.info(
+                "No feedback model: %d usable likes and skips in the training lists (need %d, "
+                "with both likes and skips)",
+                report["events"],
+                fb["min_events"],
+            )
+        else:
+            extra = {"feedback_events": report["events"], "feedback_likes": report["likes"]}
+            candidates.append(
+                log_variant(
+                    "all-feedback", "all", "feedback", recommender, cfg["k"], split, tags, extra
+                )
+            )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     summary = {

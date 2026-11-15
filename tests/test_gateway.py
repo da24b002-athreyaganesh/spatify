@@ -10,6 +10,7 @@ import json
 from collections import Counter
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from uuid import UUID
 
 import httpx
 import pandas as pd
@@ -18,6 +19,7 @@ from fastapi.testclient import TestClient
 from mlflow.exceptions import MlflowException
 
 from spatify.gateway.app import create_app
+from spatify.gateway.feedback_drift import feedback_drift
 from spatify.gateway.model_client import ModelClient
 from spatify.gateway.registry import Registry
 from spatify.gateway.settings import Settings
@@ -39,11 +41,29 @@ class FakeStore:
     def ping(self):
         return self.up
 
-    def save_recommendation(self, request_id, seed, sliders, k, version, run_id, track_ids):
+    def save_recommendation(
+        self, request_id, seed, sliders, k, version, run_id, track_ids, explored=None
+    ):
         self.lists[request_id] = {
             "track_ids": track_ids,
             "model_version": version,
             "model_run_id": run_id,
+            "explored": explored or [],
+        }
+
+    def like_rates(self, recent, baseline):
+        """Like rates over the feedback recorded so far, newest first."""
+        actions = [row["action"] for row in reversed(list(self.feedback.values()))]
+        recent_part, base_part = actions[:recent], actions[recent : recent + baseline]
+
+        def rate(part):
+            return sum(a == "like" for a in part) / len(part) if part else None
+
+        return {
+            "recent_events": len(recent_part),
+            "recent_rate": rate(recent_part),
+            "baseline_events": len(base_part),
+            "baseline_rate": rate(base_part),
         }
 
     def get_recommendation(self, request_id):
@@ -308,6 +328,57 @@ def test_metrics_count_requests_by_endpoint(gw):
 
 def test_drift_before_any_batch_is_404(gw):
     assert gw.client.get("/drift").status_code == 404
+
+
+# --- Exploration and feedback drift (D37) ---------------------------------------------
+
+
+def test_a_list_of_ten_gives_its_last_slot_to_a_random_track(gw):
+    shown = gw.client.post("/recommend", json={"track_id": "a", "k": 10}).json()
+    recs = shown["recommendations"]
+    assert [r["rank"] for r in recs] == list(range(1, 11))
+    assert [r["explored"] for r in recs] == [False] * 9 + [True]
+    pick = recs[-1]
+    assert pick["track_id"] in {"b", "c"}  # from the catalogue; not the seed, not a model pick
+    assert pick["why"] == []
+    saved = gw.store.lists[UUID(shown["request_id"])]
+    assert saved["explored"] == [pick["track_id"]] and saved["track_ids"][-1] == pick["track_id"]
+    rated = {"request_id": shown["request_id"], "track_id": pick["track_id"], "action": "skip"}
+    assert gw.client.post("/feedback", json=rated).status_code == 201
+
+    short = gw.client.post("/recommend", json={"track_id": "a", "k": 3}).json()
+    assert not any(r["explored"] for r in short["recommendations"])  # int(0.1 * 3) = 0 slots
+
+
+def test_drift_reports_the_like_rate_once_there_is_feedback(gw):
+    shown = gw.client.post("/recommend", json={"track_id": "a", "k": 3}).json()
+    for track_id, action in (("t0", "like"), ("t1", "skip")):
+        rated = {"request_id": shown["request_id"], "track_id": track_id, "action": action}
+        gw.client.post("/feedback", json=rated)
+    report = gw.client.get("/drift").json()  # no batches yet, but feedback is enough
+    assert report["batches"] == []
+    feedback = report["feedback"]
+    assert feedback["recent_events"] == 2 and feedback["recent_like_rate"] == 0.5
+    assert not feedback["enough_feedback"] and not feedback["drifted"]
+
+
+def test_feedback_drift_needs_a_big_enough_drop_and_enough_feedback():
+    stats = {
+        "recent_events": 200,
+        "recent_rate": 0.1,
+        "baseline_events": 1000,
+        "baseline_rate": 0.4,
+    }
+    report = feedback_drift(stats, recent=200, baseline=1000, threshold=0.15)
+    assert report["drop"] == 0.3 and report["enough_feedback"] and report["drifted"]
+    small_drop = feedback_drift(stats | {"recent_rate": 0.3}, 200, 1000, 0.15)
+    assert small_drop["drop"] == 0.1 and not small_drop["drifted"]
+    too_few = feedback_drift(stats | {"recent_events": 50}, 200, 1000, 0.15)
+    assert not too_few["enough_feedback"] and not too_few["drifted"]
+    half_a_baseline = feedback_drift(stats | {"baseline_events": 500}, 200, 1000, 0.15)
+    assert half_a_baseline["drifted"]  # the baseline needs only half its window
+    nothing = feedback_drift({}, 200, 1000, 0.15)
+    assert nothing["drop"] is None and nothing["recent_events"] == 0 and not nothing["drifted"]
 
 
 # --- "Why" labels (D33) ---------------------------------------------------------------

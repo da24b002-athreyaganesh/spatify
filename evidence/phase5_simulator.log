@@ -1,0 +1,93 @@
+Seed 1 (pass --seed 1 to repeat); 67,718 songs to pick from
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  21/210 lists, like rate so far 45.6%
+  42/210 lists, like rate so far 46.7%
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  63/210 lists, like rate so far 43.9%
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  84/210 lists, like rate so far 44.6%
+  105/210 lists, like rate so far 42.9%
+  126/210 lists, like rate so far 44.2%
+  147/210 lists, like rate so far 43.3%
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  168/210 lists, like rate so far 42.1%
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  189/210 lists, like rate so far 42.2%
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  list failed: /recommend 404: {"detail":"That track isn't in the current model's catalogue; find one with /tracks/search"}
+  210/210 lists, like rate so far 42.1%
+Simulated 210 lists in 7.8 s (26.9 lists/s)
+model version | lists | likes | skips | like rate
+            1 |   197 |   829 |  1141 |     42.1%
+Random (explored) picks liked: 11 of 197 (6%)
+Lists that failed: 13
+Seed 2 (pass --seed 2 to repeat); 63,866 songs to pick from
+  6/60 lists, like rate so far 51.7%
+  12/60 lists, like rate so far 44.2%
+  18/60 lists, like rate so far 43.3%
+  24/60 lists, like rate so far 40.4%
+  30/60 lists, like rate so far 41.7%
+  36/60 lists, like rate so far 40.6%
+  42/60 lists, like rate so far 41.9%
+  48/60 lists, like rate so far 42.3%
+  54/60 lists, like rate so far 42.0%
+  60/60 lists, like rate so far 41.7%
+Simulated 60 lists in 1.9 s (31.9 lists/s)
+model version | lists | likes | skips | like rate
+            1 |    60 |   250 |   350 |     41.7%
+Random (explored) picks liked: 0 of 60 (0%)
+Lists that failed: 0
+Seed 3 (pass --seed 3 to repeat); 63,866 songs to pick from
+  3/30 lists, like rate so far 3.3%
+  6/30 lists, like rate so far 6.7%
+  9/30 lists, like rate so far 5.6%
+  12/30 lists, like rate so far 7.5%
+  15/30 lists, like rate so far 7.3%
+  18/30 lists, like rate so far 8.9%
+  21/30 lists, like rate so far 8.6%
+  24/30 lists, like rate so far 8.3%
+  27/30 lists, like rate so far 8.5%
+  30/30 lists, like rate so far 8.0%
+Simulated 30 lists in 1.2 s (26.0 lists/s)
+model version | lists | likes | skips | like rate
+            7 |    30 |    24 |   276 |      8.0%
+Random (explored) picks liked: 0 of 30 (0%)
+Lists that failed: 0
+Seed 4 (pass --seed 4 to repeat); 63,866 songs to pick from
+  3/30 lists, like rate so far 0.0%
+  6/30 lists, like rate so far 1.7%
+  9/30 lists, like rate so far 1.1%
+  12/30 lists, like rate so far 1.7%
+  15/30 lists, like rate so far 2.0%
+  18/30 lists, like rate so far 1.7%
+  21/30 lists, like rate so far 1.9%
+  24/30 lists, like rate so far 2.5%
+  27/30 lists, like rate so far 3.0%
+  30/30 lists, like rate so far 4.0%
+Simulated 30 lists in 0.9 s (33.1 lists/s)
+model version | lists | likes | skips | like rate
+            7 |    30 |    12 |   288 |      4.0%
+Random (explored) picks liked: 2 of 30 (7%)
+Lists that failed: 0
+Seed 4 (pass --seed 4 to repeat); 63,866 songs to pick from
+  3/30 lists, like rate so far 53.3%
+  6/30 lists, like rate so far 45.0%
+  9/30 lists, like rate so far 44.4%
+  12/30 lists, like rate so far 46.7%
+  15/30 lists, like rate so far 45.3%
+  18/30 lists, like rate so far 45.0%
+  21/30 lists, like rate so far 45.2%
+  24/30 lists, like rate so far 45.8%
+  27/30 lists, like rate so far 45.2%
+  30/30 lists, like rate so far 44.0%
+Simulated 30 lists in 1.1 s (27.6 lists/s)
+model version | lists | likes | skips | like rate
+            1 |    30 |   132 |   168 |     44.0%
+Random (explored) picks liked: 2 of 30 (7%)
+Lists that failed: 0

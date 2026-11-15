@@ -17,6 +17,12 @@ mlflow.search_runs can rank them (register stage):
 - ms_per_query: scoring time, a first look at serving latency.
 Random recommendations give a baseline for genre_match_at_k.
 
+With feedback (D37), each candidate is also judged on the held-out likes and skips (the
+latest lists in the feedback snapshot): feedback_hit_rate and feedback_ndcg at k, from
+re-ranking each list's rated tracks. Once there are min_test_lists such lists, these
+judge the candidates and gate promotion instead of genre match: feedback measures what
+listeners want, genre only stands in for it.
+
 Run through MLflow (as DVC does):
     mlflow run . -e evaluate --env-manager=local --experiment-name spatify
 """
@@ -36,13 +42,20 @@ import pandas as pd
 from mlflow import MlflowClient
 
 from spatify.model.data import eval_queries, genre_sets, load_tracks
-from spatify.model.plots import plt, variants_figure
+from spatify.model.feedback import (
+    load_events,
+    random_ranking_metrics,
+    ranking_metrics,
+    split_by_time,
+)
+from spatify.model.plots import feedback_figure, plt, variants_figure
 from spatify.model.tracking import lineage
 from spatify.pipeline.common import load_params, setup_logging
 
 log = logging.getLogger(__name__)
 
-METRIC = "genre_match_at_k"  # the promotion metric
+METRIC = "genre_match_at_k"  # the promotion metric before there is enough feedback
+FEEDBACK_METRIC = "feedback_ndcg"  # ... and once there is (D37)
 
 
 def score(
@@ -90,8 +103,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--plots", type=Path, default=Path("reports/evaluate"))
     args = parser.parse_args(argv)
     setup_logging()
-    split, cfg = load_params("split"), load_params("evaluate")
+    split, cfg, fb = load_params("split"), load_params("evaluate"), load_params("feedback")
     k = cfg["k"]
+    _, test_events = split_by_time(load_events(Path(fb["path"])), fb["test_fraction"])
+    lists = 0  # held-out feedback lists the candidates could be judged on
 
     tracks = load_tracks(args.data)
     genres = genre_sets(tracks)
@@ -108,6 +123,14 @@ def main(argv: list[str] | None = None) -> None:
             model = mlflow.pyfunc.load_model(cand["model_uri"])
             predict = lambda df, params, m=model: m.predict(df, params=params)  # noqa: E731
             metrics = score(predict, query_ids, genres, k, len(tracks))
+            if not test_events.empty:
+                ranked = ranking_metrics(
+                    model.unwrap_python_model().recommender, test_events, fb["k"]
+                )
+                if ranked["lists"]:
+                    metrics["feedback_hit_rate"] = ranked["hit_rate"]
+                    metrics["feedback_ndcg"] = ranked["ndcg"]
+                    lists = ranked["lists"]
             for name, value in metrics.items():
                 client.log_metric(cand["run_id"], name, value)  # into the candidate's run
             mlflow.log_metrics({f"{cand['variant']}.{n}": v for n, v in metrics.items()})
@@ -116,6 +139,9 @@ def main(argv: list[str] | None = None) -> None:
             log.info("%s: genre match@%d %.4f", cand["variant"], k, metrics[METRIC])
         baseline = random_baseline(tracks, query_ids, genres, k, cfg["seed"])
         mlflow.log_metric("random_baseline.genre_match_at_k", baseline)
+        random_feedback = random_ranking_metrics(test_events, fb["k"], cfg["seed"])
+        promotion_metric = FEEDBACK_METRIC if lists >= fb["min_test_lists"] else METRIC
+        mlflow.log_params({"promotion_metric": promotion_metric, "feedback_test_lists": lists})
 
         table = pd.DataFrame(rows).sort_values(METRIC, ascending=False, kind="stable")
         args.plots.mkdir(parents=True, exist_ok=True)
@@ -125,27 +151,51 @@ def main(argv: list[str] | None = None) -> None:
         mlflow.log_figure(fig, "variants.png")
         plt.close(fig)
         mlflow.log_table(table, "variants.json")
+        fig = feedback_figure(table, random_feedback, fb["k"], lists)
+        fig.savefig(args.plots / "feedback.png", dpi=110)
+        mlflow.log_figure(fig, "feedback.png")
+        plt.close(fig)
 
-    best = table.iloc[0]
+    best = table.sort_values(promotion_metric, ascending=False, kind="stable").iloc[0]
+    columns = [c for c in table.columns if c not in ("variant", "feature_set", "weighting")]
+
+    def values(row) -> dict:
+        return {name: float(row[name]) for name in columns if pd.notna(row[name])}
+
     summary = {
         "k": k,
         "queries": len(query_ids),
         "random_baseline": baseline,
         "best_variant": best["variant"],
-        "best": {name: float(best[name]) for name in metrics},
-        "variants": {
-            row["variant"]: {name: float(row[name]) for name in metrics}
-            for _, row in table.iterrows()
+        "best": values(best),
+        "variants": {row["variant"]: values(row) for _, row in table.iterrows()},
+        "feedback": {
+            "k": fb["k"],
+            "test_lists": lists,
+            "random": random_feedback,
+            "promotion_metric": promotion_metric,
         },
     }
+    if FEEDBACK_METRIC in table:
+        scored = table.dropna(subset=[FEEDBACK_METRIC])
+        cold = scored[scored["weighting"] != "feedback"]
+        learned = scored[scored["weighting"] == "feedback"]
+        if not cold.empty and not learned.empty:  # the problem statement's comparison
+            summary["comparison"] = {
+                "cold_start": values(cold.sort_values(FEEDBACK_METRIC).iloc[-1]),
+                "cold_start_variant": cold.sort_values(FEEDBACK_METRIC).iloc[-1]["variant"],
+                "feedback": values(learned.iloc[0]),
+            }
     args.metrics.parent.mkdir(parents=True, exist_ok=True)
     args.metrics.write_text(json.dumps(summary, indent=2) + "\n")
     log.info(
-        "Best: %s, genre match@%d %.4f (random tracks: %.4f)",
+        "Best by %s: %s (genre match@%d %.4f; random tracks %.4f; held-out feedback lists %d)",
+        promotion_metric,
         best["variant"],
         k,
         best[METRIC],
         baseline,
+        lists,
     )
 
 

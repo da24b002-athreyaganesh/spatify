@@ -6,6 +6,7 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Why:** it keeps the code next to other course materials and keeps my stuff organised.
 - **Costs and mitigations:** NTFS (`ntfs3`) doesn't keep Unix file modes, so Git's `core.fileMode` is off and executable bits are set in the Dockerfiles rather than taken from the checkout. uv can't hardlink from its cache on ext4, so `link-mode = "copy"` is set. Service data (Postgres, MLflow, Prometheus, Grafana) lives in named Docker volumes, which sit on ext4.
 - **Considered:** `~/spatify` on ext4, which avoids these workarounds.
+- **Remounts:** after a reboot on 2026-11-15, the drive came back at `/run/media/athreya-ganesh/CE72C02072C00EE1` instead of `…EE11`. Containers keep the absolute bind-mount paths they were created with, so Docker mounted empty, root-owned folders at the old path: the worker crash-looped and the gateway stopped. The venv's scripts also start with absolute paths, so `uv run pytest` and `uv run dvc` stopped working. **Fix after a move:** `docker compose up -d --force-recreate` from the new path, and `uv sync --all-extras --reinstall`.
 - **Note:** the planning TODO stays in `Project/`, outside the repo and out of version control.
 
 ## D2. uv instead of Conda/Mamba for the Python environment
@@ -240,3 +241,53 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **It doesn't commit.** It leaves `dvc.lock` and `data/incoming.dvc` updated in the working tree for the operator to commit; MLflow tags the models it trains `git_dirty=true`. Committing from a container into the user's repo would skip the pre-commit hooks and mix with whatever else the user has in progress.
 - **One pipeline at a time:** DVC locks the repo, so don't run `dvc` on the host while the worker is running.
 - **Considered:** watching the folder with inotify (unreliable on bind mounts and NTFS, hence polling); a fixed schedule (a polled queue starts a requested run within seconds). Phase 6's alerts can queue runs through the same table.
+
+## D37. Learning from likes and skips: feature weights from a logistic regression
+- **What it learns:** new feature weights for the same cosine recommender. A logistic regression predicts a like from the squared difference between the query and the rated track, feature by feature, in z-scores. A feature where closeness raises the chance of a like gets weight sqrt(−coefficient); one where it doesn't gets 0. The weights are scaled to a mean square of 1, like the Fisher weights (D18). Balanced classes, C = 1, every feature.
+  - **Z-scores, not the recommender's unit vectors:** unit vectors tie every feature to all the others; z-scores recovered the simulated listeners' taste better.
+  - **Why this model:** the served model stays one kind of model (nearest neighbours in one pyfunc), and the weights explain themselves (the "why" labels, D33, and a weights plot in MLflow). The problem statement asks for "a re-ranking or retraining step"; this is the retraining kind.
+  - **Considered:** a separate re-ranker on top of the recommender (two models to serve and version together); collaborative filtering (needs listening histories, which cold-start listeners don't have, and is out of scope).
+- **Where it enters the pipeline:**
+  - **The snapshot:** before every retrain, the worker exports all likes and skips from Postgres to `data/feedback/feedback.parquet` and runs `dvc add data/feedback`. Train, evaluate and register depend on it, so every model traces to the exact ratings it learnt from.
+  - **Train** adds an `all-feedback` candidate when the earlier 80% of lists (by time) hold at least 1,000 usable ratings with both likes and skips; otherwise it logs why there is none.
+  - **The trigger:** the worker retrains (trigger `feedback`) once 2,000 ratings have arrived since the last snapshot (`feedback.retrain_every`).
+- **How it's judged:** on the latest 20% of lists, each list's rated tracks are re-ranked by the model's similarity to the query, with likes as the relevant items: NDCG@3 and hit rate@3, against a random order. Once there are at least 30 held-out lists, NDCG@3 picks the best candidate and decides promotion (minimum gain 0.01); before that, genre match@10 does, as in D22. Feedback measures what listeners want; genre only stood in for it.
+- **Measured offline** (`scripts/feedback_experiment.py`; 3 seeds; listeners with the hidden taste of D38):
+  - **Against a uniform-weight champion** (`evidence/phase5_feedback_offline.log`, 2,000 ratings): NDCG@3 0.58 / 0.36 / 0.62 → 0.67 / 0.55 / 0.66, and the like rate 37–42% → 47–55%.
+  - **Against a Fisher-weight champion, like version 1** (`evidence/phase5_feedback_offline_fisher.log`, 4,000 ratings): the like rate still rises (44–49% → 49–55%), but NDCG@3 on the champion's held-out lists is mixed (0.576 → 0.553, 0.569 → 0.572, 0.583 → 0.629). The gate would promote in one seed of three.
+  - **The learnt weights** put energy, valence, acousticness and danceability on top in every seed. Those are the four features the simulated listeners care about most (D38), and the system never sees that list.
+- **The real run (step 5.4, `evidence/phase5_worker_feedback.log`):** with 3,955 ratings, `all-feedback` scored 0.577 on 72 held-out lists against 0.483 for `all-uniform`. The Fisher champion scored 0.587, so the best candidate was another `all-fisher` (gain 0.0) and nothing was promoted.
+- **Why the gate and the like rate disagree:** the held-out lists are the champion's own picks, ranked by its own weights. Re-ranking them favours the model that chose them (off-policy evaluation). The like rate on a model's own lists is the fair test, but it needs live traffic: shadow or canary serving with the `challenger` alias (L6, Stretch). Until then the gate is conservative. It can keep a better model out, but it never lets a worse one in.
+- **Exploration** (the hidden feedback loop from L1): in a list of 10, the lowest slot goes to a random track (`EXPLORATION_RATE` 0.1; lists under 10 get none). It is stored in `recommendations.explored`, carried into the snapshot, and shown as a "wildcard" on Discover. Without it, feedback covers only tracks the model already ranks high, so it can't learn where its ranking is wrong. **Cost:** random picks are liked about 6% of the time, against about 42% for the model's.
+- **Feedback drift:** the like rate of the latest 200 ratings against the 1,000 before them. It's drift at a drop of 0.15 or more, once there are 200 recent and 500 earlier ratings. It shows on `/drift`, the console and the gauges `spatify_feedback_like_rate{window}` and `spatify_feedback_drift`. A falling like rate while PSI stays stable is L1's concept-drift signal.
+  - **It doesn't retrain by itself:** right after a promotion, a falling like rate more likely means a bad model than new taste, and retraining on that model's feedback is slower than rolling back. An operator decides (D39).
+- **Retrain-to-redeploy time:** after a promotion, the worker asks the model server every second until it answers with the new model's run ID. That wait is recorded as the run's `serving` stage, and the time from the run's start goes to `spatify_retrain_to_redeploy_seconds`.
+- **Limits:**
+  - The listeners are simulated (D38): the gain shows the loop works, not how much real listeners would gain.
+  - **Off-policy evaluation** favours the champion (see above). The like rate per version (console, Models) is the on-policy check.
+  - Candidates that drop features skip slider lists they can't read, so they're judged on slightly different lists.
+
+## D38. Simulated listeners, with hidden taste
+- **Why:** real listeners are few. The problem statement says feedback "will be partly produced by a documented user-simulation script", and the report must say so.
+- **A listener** (`spatify.simulation`):
+  - **Taste:** they care about energy (importance 3), valence (3), danceability (2), acousticness (2) and tempo (1). Each listener's importances vary (log-normal, σ 0.3).
+  - **Tolerance:** between 0.04 and 0.09.
+  - **Ratings:** they like a track with a logistic probability that falls as the importance-weighted mean gap from what they want grows (slope 25; tempo gaps divided by 200). Even an identical song isn't a sure like, so the feedback is noisy.
+- **Each list is a new listener**, a cold-start user. 70% start from a random seed song and want songs that sound like it; 30% set two or three sliders and care only about those.
+- **Calibration:** the cold-start model's picks are liked about 40–43% of the time (seed lists about 44%, slider lists about 22%) and random picks about 6% (`evidence/phase5_feedback_offline.log`).
+- **How it runs:**
+  - **`scripts/simulate_users.py`** goes through the real gateway (`/recommend`, then `/feedback` per track) with a thread pool, so it doubles as the load generator for Phase 6. Each list has its own seeded random generator, so thread timing doesn't change a run; the seed is printed.
+  - **Its "ears"** are the local catalogue (`data/features/tracks`), because the API returns no audio features.
+  - **`offline_lists`** runs the same listeners against a model directly, for the tests and `scripts/feedback_experiment.py`.
+- **Limits:** real taste isn't five fixed features. These listeners ignore genre, artist and popularity, and the like-rate level is a calibration choice. The report states this.
+
+## D39. A forced bad deployment, for the rollback demo
+- **What:** `scripts/force_bad_model.py` copies the champion with each track's audio features taken from another random track, as a bad join would do. It registers the copy with the trigger `forced_bad` and makes it champion directly, skipping the promotion gate; the old champion becomes `previous`. It needs `--yes`.
+- **Why this kind of break:** it passes every check before serving (same columns, ranges and signature) and fails only where listeners notice. That is the kind of failure monitoring is for, and the problem statement's evaluation plan asks for "successful rollback after a forced bad deployment". Offline, listeners like about 6% of its picks, against about 41% for the model it copied.
+- **What follows:**
+  1. The model server switches within about 15 s (D24).
+  2. The like rate falls (console, Models), and feedback drift fires (console, Data drift; D37).
+  3. An operator rolls back from the console or `POST /models/rollback`.
+  4. The broken version stays registered, tagged, for the record.
+- **If nobody rolls back:** after 2,000 more ratings, the worker's feedback trigger retrains, and a challenger will most likely beat the broken champion at the gate. That is a slower, automatic way out.
+- **Why a script, not a console button:** a button that deploys a broken model has no place in a real operator console.

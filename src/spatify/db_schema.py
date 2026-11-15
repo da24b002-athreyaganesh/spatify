@@ -1,6 +1,7 @@
 """The Postgres tables, shared by the gateway and the worker (each creates any missing).
 
-- recommendations, feedback: every served list and every like or skip on it (D26).
+- recommendations, feedback: every served list (with its exploration picks) and
+  every like or skip on it (D26, D37).
 - pipeline_runs: the run queue and history; the gateway queues runs, the worker runs
   them and records their result (D29, D36).
 - incoming_batches: every batch file the worker has seen in data/incoming, and what
@@ -18,6 +19,8 @@ CREATE TABLE IF NOT EXISTS recommendations (
     model_run_id  text NOT NULL,
     track_ids     text[] NOT NULL
 );
+-- Exploration picks in each list (D37); added after the table, so ALTER for old databases.
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS explored text[] NOT NULL DEFAULT '{}';
 CREATE TABLE IF NOT EXISTS feedback (
     id            bigserial PRIMARY KEY,
     created_at    timestamptz NOT NULL DEFAULT now(),

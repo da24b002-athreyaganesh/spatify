@@ -69,6 +69,16 @@ evaluate:
 register:
   model_name: spatify
   min_gain: 0.005         # promote only if genre match@K beats the champion by this much
+  min_gain_feedback: 0.01 # ... or, with enough held-out feedback, NDCG@k by this much (D37)
+
+feedback:                 # learning from likes and skips (D37)
+  path: data/feedback/feedback.parquet   # the snapshot the worker exports before retraining
+  test_fraction: 0.2      # the latest share of lists, held out for hit rate and NDCG
+  min_events: 1000        # fewer usable likes and skips than this: no feedback model
+  min_test_lists: 30      # fewer held-out lists than this: promote on genre match instead
+  k: 3                    # hit rate@k and NDCG@k over each list's rated tracks
+  c: 1.0                  # the logistic regression's inverse regularisation strength
+  retrain_every: 2000     # the worker retrains after this many new likes and skips
 
 drift:                    # drift_check: each incoming batch against the training data (D35)
   reference: tracks.csv   # the source whose rows are the reference (the base catalogue)

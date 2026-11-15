@@ -1,0 +1,15 @@
+worker-1  | 2026-11-14 23:56:19,801 INFO spatify.worker: Run 243 (feedback) succeeded in 44 s. Enough new likes and skips arrived, so the model was retrained. Training saw 3,955 likes and skips. Registered version 6: not promoted on feedback_ndcg (gain 0.0); version 1 keeps serving.
+# HELP spatify_retrain_to_redeploy_seconds From a retraining run's start to the model server answering with the promoted model
+# TYPE spatify_retrain_to_redeploy_seconds histogram
+spatify_retrain_to_redeploy_seconds_bucket{le="30.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="45.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="60.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="90.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="120.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="180.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="240.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="300.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="600.0"} 0.0
+spatify_retrain_to_redeploy_seconds_bucket{le="+Inf"} 0.0
+spatify_retrain_to_redeploy_seconds_count 0.0
+spatify_retrain_to_redeploy_seconds_sum 0.0

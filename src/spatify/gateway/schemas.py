@@ -64,6 +64,9 @@ class Recommendation(Track):
         default_factory=list,
         description="Traits shared with the query that add most to the score, strongest first",
     )
+    explored: bool = Field(
+        False, description="A random pick in place of the lowest-ranked slot, to learn from"
+    )
 
 
 class RecommendResponse(BaseModel):
@@ -176,10 +179,22 @@ class DriftBatch(BaseModel):
     features: list[DriftFeature]
 
 
+class FeedbackDrift(BaseModel):
+    recent_events: int
+    recent_like_rate: float | None
+    baseline_events: int
+    baseline_like_rate: float | None
+    drop: float | None = Field(description="baseline like rate minus recent like rate")
+    threshold: float
+    enough_feedback: bool
+    drifted: bool
+
+
 class DriftReport(BaseModel):
     reference_rows: int | None = Field(description="Training rows the batches are compared with")
     thresholds: dict[str, float]
     batches: list[DriftBatch] = Field(description="Newest first")
+    feedback: FeedbackDrift | None = Field(None, description="The like rate: recent vs before")
 
 
 class TriggerRequest(BaseModel):

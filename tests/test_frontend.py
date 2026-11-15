@@ -64,7 +64,7 @@ VERSIONS = [
 
 class FakeGateway:
     def __init__(self):
-        self.calls, self.down, self.drift = [], False, None
+        self.calls, self.down, self.drift, self.explore = [], False, None, False
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         if self.down:
@@ -105,6 +105,8 @@ class FakeGateway:
                 }
                 for i in range(body["k"])
             ]
+            if self.explore:  # the last slot is a random pick, as the gateway does (D37)
+                recs[-1] |= {"why": [], "explored": True}
             return httpx.Response(
                 200,
                 json={
@@ -209,6 +211,15 @@ def test_sliders_alone_are_enough(gateway):
     at.button(key="go").click().run()
     sent = next(c for c in gateway.calls if c[1] == "/recommend")
     assert sent[2]["sliders"] == {"energy": 0.7} and "track_id" not in sent[2]
+
+
+def test_a_random_pick_is_shown_as_a_wildcard(gateway):
+    gateway.explore = True
+    at = page("discover")
+    at.toggle(key="use-energy").set_value(True).run()
+    at.button(key="go").click().run()
+    shown = texts(at.markdown)
+    assert shown.count("**Why:** energetic") == 9 and shown.count("**A wildcard:**") == 1
 
 
 def test_no_matches_says_what_to_do(gateway):
@@ -331,3 +342,31 @@ def test_console_shows_each_batch_and_the_latest_drift(gateway):
     assert at.selectbox(key="drift_batch").value["name"] == "shifted_01.csv"  # the latest scored
     assert "has drifted" in texts(at.warning)
     assert ui.drift_chart(DRIFT["batches"][1], DRIFT["thresholds"]) is not None
+
+
+FEEDBACK_DRIFT = {
+    "recent_events": 200,
+    "recent_like_rate": 0.06,
+    "baseline_events": 1000,
+    "baseline_like_rate": 0.41,
+    "drop": 0.35,
+    "threshold": 0.15,
+    "enough_feedback": True,
+    "drifted": True,
+}
+
+
+def test_console_warns_when_the_like_rate_falls(gateway):
+    gateway.drift = {"reference_rows": None, "thresholds": {}, "batches": [],
+                     "feedback": FEEDBACK_DRIFT}  # fmt: skip
+    at = page("console")
+    assert "No drift report yet" in texts(at.info)  # no batches, but feedback is shown
+    rates = {m.label: m.value for m in at.metric}
+    assert rates["Like rate, latest 200 ratings"] == "6%"
+    assert rates["Like rate, the 1,000 before"] == "41%"
+    assert "dropped by 35 points" in texts(at.warning)
+
+    gateway.drift["feedback"] = FEEDBACK_DRIFT | {"drifted": False, "enough_feedback": False}
+    at = page("console")
+    assert "dropped by" not in texts(at.warning)
+    assert "once enough likes and skips" in texts(at.caption)

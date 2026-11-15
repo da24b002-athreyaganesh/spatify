@@ -84,8 +84,10 @@ stages:
     deps:
     - MLproject
     - data/features
+    - data/feedback
     - python_env.yaml
     - src/spatify/model/data.py
+    - src/spatify/model/feedback.py
     - src/spatify/model/plots.py
     - src/spatify/model/pyfunc.py
     - src/spatify/model/recommender.py
@@ -95,6 +97,7 @@ stages:
     - features.columns
     - split
     - train
+    - feedback
     outs:
     - models/candidates.json:
         cache: false
@@ -103,13 +106,16 @@ stages:
       --run-name evaluate
     deps:
     - data/features
+    - data/feedback
     - models/candidates.json
     - src/spatify/model/data.py
     - src/spatify/model/evaluate.py
+    - src/spatify/model/feedback.py
     - src/spatify/model/plots.py
     params:
     - split
     - evaluate
+    - feedback
     metrics:
     - metrics/evaluate.json:
         cache: false
@@ -123,20 +129,25 @@ stages:
     outs:
     - reports/evaluate/variants.png:
         cache: false
+    - reports/evaluate/feedback.png:
+        cache: false
   register:
     cmd: mlflow run . -e register --env-manager=local --experiment-name spatify
       --run-name register
     deps:
     - data/features
+    - data/feedback
     - metrics/evaluate.json
     - models/candidates.json
     - src/spatify/model/data.py
     - src/spatify/model/evaluate.py
+    - src/spatify/model/feedback.py
     - src/spatify/model/register.py
     params:
     - split
     - evaluate
     - register
+    - feedback
     metrics:
     - metrics/register.json:
         cache: false

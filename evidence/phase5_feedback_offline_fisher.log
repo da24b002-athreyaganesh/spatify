@@ -1,0 +1,26 @@
+63,866 tracks; 400 lists per seed, served by all-fisher; NDCG and hit rate at 3
+
+== seed 0: 4,000 ratings, 3,200 to learn from
+   learned weights: energy 2.11, valence 1.75, acousticness 1.33, danceability 1.28, tempo 0.60, mode 0.55, loudness 0.52, speechiness 0.31, key_sin 0.23, instrumentalness 0.00, liveness 0.00, key_cos 0.00
+   fisher (serving) NDCG 0.576  hit rate 0.882 on 76 held-out lists
+   feedback         NDCG 0.553  hit rate 0.895 on 76 held-out lists
+   uniform          NDCG 0.546  hit rate 0.895 on 76 held-out lists
+   random order     NDCG 0.463  hit rate 0.813
+   like rate: fisher (serving) 47.9%, feedback 55.4%, forced bad 6.1%
+
+== seed 1: 4,000 ratings, 3,200 to learn from
+   learned weights: acousticness 1.96, valence 1.77, energy 1.66, danceability 1.27, speechiness 0.51, liveness 0.47, tempo 0.28, key_cos 0.24, mode 0.24, loudness 0.00, instrumentalness 0.00, key_sin 0.00
+   fisher (serving) NDCG 0.569  hit rate 0.865 on 74 held-out lists
+   feedback         NDCG 0.572  hit rate 0.865 on 74 held-out lists
+   uniform          NDCG 0.471  hit rate 0.797 on 74 held-out lists
+   random order     NDCG 0.461  hit rate 0.793
+   like rate: fisher (serving) 44.3%, feedback 49.3%, forced bad 5.0%
+
+== seed 2: 4,000 ratings, 3,200 to learn from
+   learned weights: acousticness 1.97, valence 1.92, energy 1.61, danceability 1.08, instrumentalness 0.66, mode 0.34, tempo 0.23, key_cos 0.21, key_sin 0.12, loudness 0.00, speechiness 0.00, liveness 0.00
+   fisher (serving) NDCG 0.583  hit rate 0.896 on 77 held-out lists
+   feedback         NDCG 0.629  hit rate 0.922 on 77 held-out lists
+   uniform          NDCG 0.561  hit rate 0.870 on 77 held-out lists
+   random order     NDCG 0.485  hit rate 0.855
+   like rate: fisher (serving) 48.6%, feedback 54.8%, forced bad 6.0%
+[peak_memory] exit 0 after 26 s; peak rise in used memory 1153 MB; lowest available 2904 MB; peak process-tree RSS 682 MB

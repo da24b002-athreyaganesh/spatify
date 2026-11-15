@@ -1,48 +1,55 @@
 {
   "experiment_id": "1",
-  "train_run_id": "7e806f8be39941a9a108bb2056fd1bd6",
+  "train_run_id": "d8ff31355fb74cf5ba724cff92fab8ca",
   "candidates": [
     {
       "variant": "all-uniform",
       "feature_set": "all",
       "weighting": "uniform",
-      "run_id": "ee7efc8973864df6ae24a5540e3bf4c5",
-      "model_uri": "models:/m-d57d5a63dd784006a845796f1f2aa48c"
+      "run_id": "bb838590c36f4540a74a56aff66e75f2",
+      "model_uri": "models:/m-b791a668d8dc45899d714208edc2de86"
     },
     {
       "variant": "all-fisher",
       "feature_set": "all",
       "weighting": "fisher",
-      "run_id": "6d4f9ec131c54d62a14e18491a8b5b9e",
-      "model_uri": "models:/m-f8d5a5136ecc40c5a1e8f67b2389af03"
+      "run_id": "c451b8ee54dd4582b59ee3033c2e6f67",
+      "model_uri": "models:/m-e63e3fb119be422a9b1cd2a0c342cc09"
     },
     {
       "variant": "no_tonal-uniform",
       "feature_set": "no_tonal",
       "weighting": "uniform",
-      "run_id": "13db01b33c724096ba78befff483949c",
-      "model_uri": "models:/m-14ba1096bae74dfd9949db63953d2aff"
+      "run_id": "bc55b8e56e624db09a37f26b8e73b4c4",
+      "model_uri": "models:/m-d0db4069956a484984d4f3c9589fa06d"
     },
     {
       "variant": "no_tonal-fisher",
       "feature_set": "no_tonal",
       "weighting": "fisher",
-      "run_id": "7208858fb01e45cdab4af7025bed4db6",
-      "model_uri": "models:/m-c0b2f74c136747cc8ec30bb698fedfe3"
+      "run_id": "47b674fefeb64773868bed6ba89e6468",
+      "model_uri": "models:/m-e4bf56714ed34e9f9653c5eb047d619b"
     },
     {
       "variant": "no_loudness-uniform",
       "feature_set": "no_loudness",
       "weighting": "uniform",
-      "run_id": "bc9e3218a5a642e28bc095ce5dc7717a",
-      "model_uri": "models:/m-219a9c707b574a70976308e3f6db8c0c"
+      "run_id": "acf2e6462dfa452e82cc83e81983e2cf",
+      "model_uri": "models:/m-3209779f30194c4ca8b3440043bb1069"
     },
     {
       "variant": "no_loudness-fisher",
       "feature_set": "no_loudness",
       "weighting": "fisher",
-      "run_id": "6e182e331b2e47a3aef7cc3103613e76",
-      "model_uri": "models:/m-a5d9fa0d23a94dcbad00806c7f37313c"
+      "run_id": "ea5ae7d0b4304cb4b4c194c05246fada",
+      "model_uri": "models:/m-de9251a3eee64c42a008a6a64f8629ee"
+    },
+    {
+      "variant": "all-feedback",
+      "feature_set": "all",
+      "weighting": "feedback",
+      "run_id": "3d0de80d94f3411a99d9f894e6e3801a",
+      "model_uri": "models:/m-4b9f580598a0412b8986bda9e903c2a0"
     }
   ]
 }

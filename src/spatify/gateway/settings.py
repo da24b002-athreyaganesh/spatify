@@ -22,6 +22,13 @@ class Settings:
     refresh_seconds: float = 15.0
     # Read-only mount of dvc.yaml, dvc.lock and metrics/, for the console's pipeline view.
     pipeline_dir: str = "/app/pipeline"
+    # Share of each list given to random tracks, so feedback isn't only about what the
+    # model already ranks high (D37). int(rate * k) slots: one in a list of 10.
+    exploration_rate: float = 0.1
+    # Feedback drift (D37): the latest likes and skips against the ones before them.
+    feedback_recent: int = 200
+    feedback_baseline: int = 1000
+    feedback_drop: float = 0.15
     log_level: str = "INFO"
 
     @classmethod
@@ -36,5 +43,9 @@ class Settings:
             model_timeout_seconds=float(env("MODEL_TIMEOUT_SECONDS", cls.model_timeout_seconds)),
             refresh_seconds=float(env("REFRESH_SECONDS", cls.refresh_seconds)),
             pipeline_dir=env("PIPELINE_DIR", cls.pipeline_dir),
+            exploration_rate=float(env("EXPLORATION_RATE", cls.exploration_rate)),
+            feedback_recent=int(env("FEEDBACK_RECENT", cls.feedback_recent)),
+            feedback_baseline=int(env("FEEDBACK_BASELINE", cls.feedback_baseline)),
+            feedback_drop=float(env("FEEDBACK_DROP", cls.feedback_drop)),
             log_level=env("LOG_LEVEL", cls.log_level),
         )

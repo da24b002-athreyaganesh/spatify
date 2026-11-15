@@ -1,13 +1,14 @@
 {
   "model_name": "spatify",
-  "version": 5,
-  "variant": "no_tonal-uniform",
+  "version": 6,
+  "variant": "all-fisher",
+  "metric": "feedback_ndcg",
   "promoted": false,
-  "challenger_score": 0.1378,
-  "champion_score": 0.1408,
-  "gain": -0.003,
-  "min_gain": 0.005,
-  "gate_queries": 1883,
+  "challenger_score": 0.5869,
+  "champion_score": 0.5869,
+  "gain": 0.0,
+  "min_gain": 0.01,
+  "gate_queries": 72,
   "champion_version": 1,
   "previous_version": 2
 }

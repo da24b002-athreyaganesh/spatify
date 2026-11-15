@@ -65,13 +65,15 @@ class Store:
         model_version: int | None,
         model_run_id: str,
         track_ids: list[str],
+        explored: list[str] | None = None,
     ) -> None:
         with self._timed("save_recommendation") as conn:
             conn.execute(
                 "INSERT INTO recommendations (request_id, seed_track_id, sliders, k,"
-                " model_version, model_run_id, track_ids) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                " model_version, model_run_id, track_ids, explored)"
+                " VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                 (request_id, seed_track_id, Jsonb(sliders), k, model_version, model_run_id,
-                 track_ids),
+                 track_ids, explored or []),
             )  # fmt: skip
 
     def get_recommendation(self, request_id: UUID) -> dict | None:
@@ -111,6 +113,20 @@ class Store:
                 " FROM feedback WHERE model_version IS NOT NULL GROUP BY model_version"
             ).fetchall()
         return {r["model_version"]: {"likes": r["likes"], "skips": r["skips"]} for r in rows}
+
+    def like_rates(self, recent: int, baseline: int) -> dict:
+        """Like rate of the latest `recent` likes and skips, and of the `baseline` before them."""
+        with self._timed("like_rates") as conn:
+            return conn.execute(
+                "WITH ordered AS (SELECT action, row_number() OVER"
+                " (ORDER BY created_at DESC, id DESC) AS n FROM feedback)"
+                " SELECT count(*) FILTER (WHERE n <= %(r)s) AS recent_events,"
+                " avg((action = 'like')::int) FILTER (WHERE n <= %(r)s) AS recent_rate,"
+                " count(*) FILTER (WHERE n > %(r)s AND n <= %(r)s + %(b)s) AS baseline_events,"
+                " avg((action = 'like')::int) FILTER (WHERE n > %(r)s AND n <= %(r)s + %(b)s)"
+                " AS baseline_rate FROM ordered",
+                {"r": recent, "b": baseline},
+            ).fetchone()
 
     def pipeline_runs(self, limit: int) -> list[dict]:
         with self._timed("pipeline_runs") as conn:

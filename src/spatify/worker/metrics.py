@@ -36,3 +36,11 @@ DRIFT_PSI = Gauge(
     ["feature"],
 )
 DRIFT_DETECTED = Gauge("spatify_drift_detected", "1 if the latest batch has drifted, else 0")
+FEEDBACK_PENDING = Gauge(
+    "spatify_feedback_pending", "Likes and skips since the last feedback snapshot (D37)"
+)
+RETRAIN_TO_REDEPLOY = Histogram(
+    "spatify_retrain_to_redeploy_seconds",
+    "From a retraining run's start to the model server answering with the promoted model",
+    buckets=(30, 45, 60, 90, 120, 180, 240, 300, 600),
+)

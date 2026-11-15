@@ -121,6 +121,7 @@ services:
       MLFLOW_HTTP_REQUEST_MAX_RETRIES: "1"
       MLFLOW_HTTP_REQUEST_TIMEOUT: "10"
       PIPELINE_DIR: /app/pipeline
+      EXPLORATION_RATE: "0.1"  # one random track in a list of 10 (D37)
     volumes:
       # The console's pipeline view (D34): the DVC pipeline, its last results and the
       # stage metrics, read-only.
@@ -193,6 +194,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/spatify
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_SERVER_URL: http://model-server:8080  # to time retrain-to-redeploy (D37)
       REPO_DIR: /repo
       POLL_SECONDS: "15"
       METRICS_PORT: "9102"

@@ -1,57 +1,110 @@
 {
   "k": 10,
   "queries": 2000,
-  "random_baseline": 0.0133,
-  "best_variant": "no_tonal-uniform",
+  "random_baseline": 0.0154,
+  "best_variant": "all-fisher",
   "best": {
-    "genre_match_at_k": 0.1356,
-    "genre_match_at_1": 0.1715,
-    "mean_score_at_k": 0.9689,
-    "coverage_at_k": 0.2481,
-    "ms_per_query": 0.563
+    "genre_match_at_k": 0.1348,
+    "genre_match_at_1": 0.1775,
+    "mean_score_at_k": 0.9583,
+    "coverage_at_k": 0.2595,
+    "ms_per_query": 0.403,
+    "feedback_hit_rate": 0.9167,
+    "feedback_ndcg": 0.5869
   },
   "variants": {
+    "all-fisher": {
+      "genre_match_at_k": 0.1348,
+      "genre_match_at_1": 0.1775,
+      "mean_score_at_k": 0.9583,
+      "coverage_at_k": 0.2595,
+      "ms_per_query": 0.403,
+      "feedback_hit_rate": 0.9167,
+      "feedback_ndcg": 0.5869
+    },
     "no_tonal-uniform": {
-      "genre_match_at_k": 0.1356,
-      "genre_match_at_1": 0.1715,
-      "mean_score_at_k": 0.9689,
-      "coverage_at_k": 0.2481,
-      "ms_per_query": 0.563
+      "genre_match_at_k": 0.1347,
+      "genre_match_at_1": 0.172,
+      "mean_score_at_k": 0.968,
+      "coverage_at_k": 0.2611,
+      "ms_per_query": 0.39,
+      "feedback_hit_rate": 0.875,
+      "feedback_ndcg": 0.5553
     },
     "no_tonal-fisher": {
-      "genre_match_at_k": 0.1356,
-      "genre_match_at_1": 0.171,
-      "mean_score_at_k": 0.9723,
-      "coverage_at_k": 0.2488,
-      "ms_per_query": 0.478
-    },
-    "all-fisher": {
-      "genre_match_at_k": 0.135,
-      "genre_match_at_1": 0.1735,
-      "mean_score_at_k": 0.959,
-      "coverage_at_k": 0.248,
-      "ms_per_query": 0.572
+      "genre_match_at_k": 0.1319,
+      "genre_match_at_1": 0.181,
+      "mean_score_at_k": 0.9718,
+      "coverage_at_k": 0.2611,
+      "ms_per_query": 0.371,
+      "feedback_hit_rate": 0.875,
+      "feedback_ndcg": 0.5826
     },
     "all-uniform": {
-      "genre_match_at_k": 0.1255,
-      "genre_match_at_1": 0.173,
-      "mean_score_at_k": 0.9489,
-      "coverage_at_k": 0.2484,
-      "ms_per_query": 0.461
+      "genre_match_at_k": 0.1282,
+      "genre_match_at_1": 0.169,
+      "mean_score_at_k": 0.9471,
+      "coverage_at_k": 0.2616,
+      "ms_per_query": 0.437,
+      "feedback_hit_rate": 0.8194,
+      "feedback_ndcg": 0.483
     },
     "no_loudness-fisher": {
-      "genre_match_at_k": 0.1221,
-      "genre_match_at_1": 0.1535,
-      "mean_score_at_k": 0.9659,
-      "coverage_at_k": 0.25,
-      "ms_per_query": 0.494
+      "genre_match_at_k": 0.1233,
+      "genre_match_at_1": 0.148,
+      "mean_score_at_k": 0.9654,
+      "coverage_at_k": 0.2606,
+      "ms_per_query": 0.383,
+      "feedback_hit_rate": 0.9028,
+      "feedback_ndcg": 0.5424
     },
     "no_loudness-uniform": {
-      "genre_match_at_k": 0.1176,
+      "genre_match_at_k": 0.1182,
       "genre_match_at_1": 0.1505,
-      "mean_score_at_k": 0.956,
-      "coverage_at_k": 0.2489,
-      "ms_per_query": 0.549
+      "mean_score_at_k": 0.9545,
+      "coverage_at_k": 0.262,
+      "ms_per_query": 0.384,
+      "feedback_hit_rate": 0.8056,
+      "feedback_ndcg": 0.4843
+    },
+    "all-feedback": {
+      "genre_match_at_k": 0.1139,
+      "genre_match_at_1": 0.1365,
+      "mean_score_at_k": 0.978,
+      "coverage_at_k": 0.2633,
+      "ms_per_query": 0.426,
+      "feedback_hit_rate": 0.8194,
+      "feedback_ndcg": 0.577
+    }
+  },
+  "feedback": {
+    "k": 3,
+    "test_lists": 72,
+    "random": {
+      "hit_rate": 0.7972,
+      "ndcg": 0.4541
+    },
+    "promotion_metric": "feedback_ndcg"
+  },
+  "comparison": {
+    "cold_start": {
+      "genre_match_at_k": 0.1348,
+      "genre_match_at_1": 0.1775,
+      "mean_score_at_k": 0.9583,
+      "coverage_at_k": 0.2595,
+      "ms_per_query": 0.403,
+      "feedback_hit_rate": 0.9167,
+      "feedback_ndcg": 0.5869
+    },
+    "cold_start_variant": "all-fisher",
+    "feedback": {
+      "genre_match_at_k": 0.1139,
+      "genre_match_at_1": 0.1365,
+      "mean_score_at_k": 0.978,
+      "coverage_at_k": 0.2633,
+      "ms_per_query": 0.426,
+      "feedback_hit_rate": 0.8194,
+      "feedback_ndcg": 0.577
     }
   }
 }

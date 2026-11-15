@@ -11,6 +11,9 @@ The promotion gate from L10 (Task A):
    yet, the challenger is promoted directly.
 Not promoting is a normal outcome, not a failure: the champion keeps serving.
 
+The metric is genre match@K until there is enough held-out feedback; then it is NDCG@k on
+the held-out likes and skips, with its own min_gain (the evaluate stage decides, D37).
+
 Run through MLflow (as DVC does):
     mlflow run . -e register --env-manager=local --experiment-name spatify
 """
@@ -23,11 +26,13 @@ import logging
 from pathlib import Path
 
 import mlflow
+import pandas as pd
 from mlflow import MlflowClient
 from mlflow.exceptions import MlflowException
 
 from spatify.model.data import eval_queries, genre_sets, load_tracks
-from spatify.model.evaluate import METRIC, score
+from spatify.model.evaluate import FEEDBACK_METRIC, METRIC, score
+from spatify.model.feedback import load_events, ranking_metrics, split_by_time
 from spatify.model.tracking import lineage
 from spatify.pipeline.common import load_params, setup_logging
 
@@ -56,15 +61,15 @@ def promote(client: MlflowClient, name: str, version: str, champion: str | None)
         client.delete_registered_model_alias(name, "challenger")
 
 
-def best_candidate(candidates: dict) -> dict:
-    """The candidate with the highest held-out genre match (ties: higher match@1)."""
+def best_candidate(candidates: dict, metric: str = METRIC) -> dict:
+    """The candidate with the highest `metric` (ties: higher genre match@1)."""
     runs = mlflow.search_runs(
         experiment_ids=[candidates["experiment_id"]],
         filter_string=f"tags.mlflow.parentRunId = '{candidates['train_run_id']}'",
-        order_by=[f"metrics.{METRIC} DESC", "metrics.genre_match_at_1 DESC"],
+        order_by=[f"metrics.{metric} DESC", "metrics.genre_match_at_1 DESC"],
         max_results=1,
     )
-    if runs.empty or runs[f"metrics.{METRIC}"].isna().all():
+    if runs.empty or runs.get(f"metrics.{metric}", pd.Series(dtype=float)).isna().all():
         raise SystemExit("No evaluated candidates for this training run; run evaluate first")
     run_id = runs.iloc[0]["run_id"]
     return next(c for c in candidates["candidates"] if c["run_id"] == run_id)
@@ -88,18 +93,34 @@ def gate_scores(
     return scores, len(common)
 
 
+def feedback_gate_scores(
+    models: dict[str, mlflow.pyfunc.PyFuncModel], test_events: pd.DataFrame, k: int
+) -> tuple[dict[str, float], int]:
+    """NDCG@k per model on the held-out lists, and how many lists the challenger was judged on."""
+    results = {
+        role: ranking_metrics(model.unwrap_python_model().recommender, test_events, k)
+        for role, model in models.items()
+    }
+    return {role: r["ndcg"] for role, r in results.items()}, results["challenger"]["lists"]
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Register the best candidate; maybe promote.")
     parser.add_argument("--data", type=Path, default=Path("data/features/tracks"))
     parser.add_argument("--candidates", type=Path, default=Path("models/candidates.json"))
+    parser.add_argument("--evaluation", type=Path, default=Path("metrics/evaluate.json"))
     parser.add_argument("--metrics", type=Path, default=Path("metrics/register.json"))
     args = parser.parse_args(argv)
     setup_logging()
     split, ev, cfg = load_params("split"), load_params("evaluate"), load_params("register")
+    fb = load_params("feedback")
     name, k = cfg["model_name"], ev["k"]
+    evaluation = json.loads(args.evaluation.read_text())
+    metric = evaluation.get("feedback", {}).get("promotion_metric", METRIC)
+    min_gain = cfg["min_gain_feedback"] if metric == FEEDBACK_METRIC else cfg["min_gain"]
 
     candidates = json.loads(args.candidates.read_text())
-    best = best_candidate(candidates)
+    best = best_candidate(candidates, metric)
     tracks = load_tracks(args.data)
     query_ids = eval_queries(tracks, split, ev["queries"], ev["seed"])
     client = MlflowClient()
@@ -129,9 +150,15 @@ def main(argv: list[str] | None = None) -> None:
         models = {"challenger": mlflow.pyfunc.load_model(f"models:/{name}/{version}")}
         if champion is not None:
             models["champion"] = mlflow.pyfunc.load_model(f"models:/{name}@champion")
-        scores, n_queries = gate_scores(models, query_ids, genre_sets(tracks), k)
+        if metric == FEEDBACK_METRIC:
+            _, test_events = split_by_time(load_events(Path(fb["path"])), fb["test_fraction"])
+            scores, n_queries = feedback_gate_scores(models, test_events, fb["k"])
+            judged_on = f"NDCG@{fb['k']} on {n_queries:,} held-out feedback lists"
+        else:
+            scores, n_queries = gate_scores(models, query_ids, genre_sets(tracks), k)
+            judged_on = f"genre match@{k} on {n_queries:,} held-out seed tracks"
         champion_score = scores.get("champion")
-        promoted = should_promote(scores["challenger"], champion_score, cfg["min_gain"])
+        promoted = should_promote(scores["challenger"], champion_score, min_gain)
         if promoted:
             promote(client, name, version, champion)
         gain = None if champion_score is None else round(scores["challenger"] - champion_score, 4)
@@ -140,14 +167,15 @@ def main(argv: list[str] | None = None) -> None:
             name,
             version,
             description=(
-                f"{best['variant']}: genre match@{k} {scores['challenger']:.4f} on "
-                f"{n_queries:,} held-out seed tracks; "
+                f"{best['variant']}: {scores['challenger']:.4f} {judged_on}; "
                 + ("promoted to champion" if promoted else f"not promoted (gain {gain})")
             ),
         )
-        mlflow.log_params({"min_gain": cfg["min_gain"], "gate_queries": n_queries, "k": k})
+        mlflow.log_params(
+            {"metric": metric, "min_gain": min_gain, "gate_queries": n_queries, "k": k}
+        )
         mlflow.log_metrics(
-            {f"{role}.{METRIC}": value for role, value in scores.items()}
+            {f"{role}.{metric}": value for role, value in scores.items()}
             | ({"gain": gain} if gain is not None else {})
             | {"promoted": int(promoted)}
         )
@@ -157,11 +185,12 @@ def main(argv: list[str] | None = None) -> None:
         "model_name": name,
         "version": int(version),
         "variant": best["variant"],
+        "metric": metric,
         "promoted": promoted,
         "challenger_score": scores["challenger"],
         "champion_score": champion_score,
         "gain": gain,
-        "min_gain": cfg["min_gain"],
+        "min_gain": min_gain,
         "gate_queries": n_queries,
         "champion_version": int(alias_version(client, name, "champion")),
         "previous_version": (
@@ -177,7 +206,7 @@ def main(argv: list[str] | None = None) -> None:
         best["variant"],
         "promoted to champion"
         if promoted
-        else f"not promoted, gain {gain} < {cfg['min_gain']}; version "
+        else f"not promoted on {metric}, gain {gain} < {min_gain}; version "
         f"{summary['champion_version']} stays champion",
     )
 

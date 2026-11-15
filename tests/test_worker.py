@@ -7,6 +7,7 @@ register.json) and returns the stage results, so the worker reads them as in the
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from spatify.worker.runner import DvcResult, follow
@@ -14,8 +15,20 @@ from spatify.worker.worker import Worker, error_line
 
 
 class FakeStore:
-    def __init__(self):
+    def __init__(self, feedback=0):
         self.runs, self.batch_rows = [], {}
+        self.feedback = [
+            {"request_id": f"r{i // 10}", "created_at": pd.Timestamp("2026-11-15", tz="UTC"),
+             "seed_track_id": "s1", "sliders": "{}", "track_id": f"t{i % 10}", "rank": i % 10 + 1,
+             "action": "like" if i % 3 else "skip", "explored": i % 10 == 9, "model_version": 1}
+            for i in range(feedback)
+        ]  # fmt: skip
+
+    def feedback_count(self):
+        return len(self.feedback)
+
+    def export_feedback(self):
+        return self.feedback
 
     def queue_length(self):
         return sum(r["status"] == "requested" for r in self.runs)
@@ -102,10 +115,14 @@ class FakeDvc:
         if args == ["repro"]:
             if self.up_to_date:
                 return DvcResult(True, {s: skipped for s in ("train", "evaluate", "register")})
-            self.write(
-                "register.json",
-                {"version": 5, "promoted": True, "gain": 0.01, "champion_version": 5},
+            (self.repo / "models").mkdir(exist_ok=True)
+            (self.repo / "models/candidates.json").write_text(
+                json.dumps({"candidates": [{"variant": "all-feedback", "run_id": "run-5"}]})
             )
+            self.write("register.json", {
+                "version": 5, "promoted": True, "gain": 0.01, "champion_version": 5,
+                "variant": "all-feedback", "metric": "feedback_ndcg",
+            })  # fmt: skip
             return DvcResult(True, {s: ran for s in ("features", "train", "evaluate", "register")})
         if args == ["repro", "--force", "--downstream", "train"]:
             self.write(
@@ -127,9 +144,12 @@ def drop(repo: Path, *names: str) -> None:
         (repo / "data/incoming" / name).write_text(f"track_id\n{name}\n")
 
 
-def make(repo, **dvc_options):
-    store, dvc = FakeStore(), FakeDvc(repo, **dvc_options)
-    return Worker(repo, store, dvc=dvc, env={}), store, dvc
+def make(repo, feedback=0, **dvc_options):
+    store, dvc = FakeStore(feedback), FakeDvc(repo, **dvc_options)
+    served = []
+    worker = Worker(repo, store, dvc=dvc, env={}, served=lambda run: served.append(run) or 12.0)
+    worker.served_calls = served
+    return worker, store, dvc
 
 
 def test_follow_reads_stage_results_from_dvc_output():
@@ -255,3 +275,32 @@ def test_error_line_skips_dvcs_sign_off():
         error_line(["some output", "Having any troubles? https://dvc.org/support"]) == "some output"
     )
     assert error_line([]) == "no output"
+
+
+def test_enough_new_feedback_retrains_on_a_fresh_snapshot(repo):
+    (repo / "params.yaml").write_text("feedback:\n  retrain_every: 50\n")
+    worker, store, dvc = make(repo, feedback=60)
+    assert worker.step() is True
+    run = store.runs[0]
+    assert (run["trigger"], run["status"], run["promoted"]) == ("feedback", "succeeded", True)
+    snapshot = pd.read_parquet(repo / "data/feedback/feedback.parquet")
+    assert len(snapshot) == 60 and snapshot["explored"].sum() == 6
+    assert (["add", "data/feedback"], None) in dvc.calls  # the snapshot is versioned
+    assert "Training saw 60 likes and skips" in run["message"]
+    assert worker.step() is False  # nothing new since the snapshot
+
+
+def test_too_little_new_feedback_waits(repo):
+    (repo / "params.yaml").write_text("feedback:\n  retrain_every: 100\n")
+    worker, store, _ = make(repo, feedback=60)
+    assert worker.step() is False and store.runs == []
+
+
+def test_a_promotion_waits_for_the_model_server_and_records_the_time(repo):
+    drop(repo, "shifted_01.csv")
+    worker, store, _ = make(repo, drifted={"shifted_01.csv"})
+    worker.step()
+    run = store.runs[0]
+    assert worker.served_calls == ["run-5"]  # the promoted candidate's training run
+    assert run["stages"]["serving"] == {"status": "ok", "seconds": 12.0}
+    assert "Serving it 12 s after registration" in run["message"]

@@ -186,7 +186,7 @@ def drift_tab() -> None:
     except api.GatewayError as err:
         ui.show_error(err, "drift")
         return
-    if report is None:
+    if report is None or not report["batches"]:
         st.info(
             "No drift report yet. When a batch of new tracks lands in data/incoming, the "
             "worker compares each of its audio features with the training data, and the "
@@ -195,6 +195,8 @@ def drift_tab() -> None:
         )
     else:
         drift_report(report)
+    if report is not None and report.get("feedback"):
+        feedback_drift(report["feedback"])
     st.subheader("Retrain", help="Start a pipeline run, e.g. after drift shows up.")
     run_button("Retrain now", "retrain")
 
@@ -247,6 +249,41 @@ def drift_report(report: dict) -> None:
         columns={"ks_stat": "KS statistic", "ks_pvalue": "KS p-value"}
     )
     st.dataframe(details, hide_index=True, width="stretch")
+
+
+def feedback_drift(report: dict) -> None:
+    """The like rate of the latest likes and skips against the ones before them (D37)."""
+    st.subheader(
+        "Listener feedback",
+        help="Has the like rate fallen? A drop while the audio features stay stable means "
+        "listeners react differently to the same kind of songs, or a new model serves them "
+        "worse (concept drift).",
+    )
+    recent, before = report["recent_like_rate"], report["baseline_like_rate"]
+    now, earlier = st.columns(2)
+    now.metric(
+        f"Like rate, latest {report['recent_events']:,} ratings",
+        "—" if recent is None else f"{100 * recent:.0f}%",
+        delta=None if report["drop"] is None else f"{-100 * report['drop']:.0f} points",
+        border=True,
+    )
+    earlier.metric(
+        f"Like rate, the {report['baseline_events']:,} before",
+        "—" if before is None else f"{100 * before:.0f}%",
+        border=True,
+    )
+    if report["drifted"]:
+        st.warning(
+            f"The like rate has dropped by {100 * report['drop']:.0f} points. If a new model "
+            "was promoted recently, consider rolling back (Models tab).",
+            icon=":material/warning:",
+        )
+    elif not report["enough_feedback"]:
+        st.caption("Feedback drift is judged once enough likes and skips have come in.")
+    st.caption(
+        f"Feedback drift: a drop of {100 * report['threshold']:.0f} points or more. It is "
+        "shown and alerted on, but doesn't retrain by itself."
+    )
 
 
 def tools_tab() -> None:

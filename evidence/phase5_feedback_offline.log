@@ -1,0 +1,23 @@
+63,866 tracks; 200 lists per seed, served by all-uniform; NDCG and hit rate at 3
+
+== seed 0: 2,000 ratings, 1,600 to learn from
+   learned weights: valence 1.94, acousticness 1.68, energy 1.63, danceability 1.03, tempo 0.96, key_cos 0.68, loudness 0.51, speechiness 0.21, instrumentalness 0.00, liveness 0.00, mode 0.00, key_sin 0.00
+   uniform (serving) NDCG 0.579  hit rate 0.897 on 39 held-out lists
+   feedback         NDCG 0.674  hit rate 0.897 on 39 held-out lists
+   random order     NDCG 0.464  hit rate 0.781
+   like rate: uniform (serving) 42.1%, feedback 55.3%, forced bad 5.9%
+
+== seed 1: 2,000 ratings, 1,600 to learn from
+   learned weights: valence 1.69, acousticness 1.56, energy 1.56, danceability 1.33, speechiness 0.97, tempo 0.78, mode 0.76, key_cos 0.52, liveness 0.35, loudness 0.00, instrumentalness 0.00, key_sin 0.00
+   uniform (serving) NDCG 0.356  hit rate 0.611 on 36 held-out lists
+   feedback         NDCG 0.551  hit rate 0.806 on 36 held-out lists
+   random order     NDCG 0.376  hit rate 0.657
+   like rate: uniform (serving) 37.4%, feedback 47.0%, forced bad 5.8%
+
+== seed 2: 2,000 ratings, 1,600 to learn from
+   learned weights: energy 1.99, valence 1.63, danceability 1.38, acousticness 1.35, key_cos 0.77, instrumentalness 0.65, key_sin 0.57, tempo 0.43, speechiness 0.31, mode 0.14, loudness 0.00, liveness 0.00
+   uniform (serving) NDCG 0.619  hit rate 0.943 on 35 held-out lists
+   feedback         NDCG 0.661  hit rate 0.914 on 35 held-out lists
+   random order     NDCG 0.506  hit rate 0.834
+   like rate: uniform (serving) 39.5%, feedback 50.7%, forced bad 7.0%
+[peak_memory] exit 0 after 19 s; peak rise in used memory 736 MB; lowest available 3559 MB; peak process-tree RSS 654 MB

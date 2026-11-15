@@ -33,11 +33,15 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from mlflow.exceptions import MlflowException
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from spatify.gateway.feedback_drift import feedback_drift
 from spatify.gateway.logs import setup_logging
 from spatify.gateway.metrics import (
     CHAMPION,
+    EXPLORED,
     FEEDBACK,
+    FEEDBACK_DRIFT,
     IN_PROGRESS,
+    LIKE_RATE,
     MODEL_UP,
     RECOMMENDATIONS,
     REQUEST_SECONDS,
@@ -110,8 +114,15 @@ def create_app(
     model = model or ModelClient(settings.model_server_url, settings.model_timeout_seconds)
     stop = threading.Event()
 
+    def like_rate_report() -> dict:
+        stats = store.like_rates(settings.feedback_recent, settings.feedback_baseline)
+        return feedback_drift(
+            stats, settings.feedback_recent, settings.feedback_baseline, settings.feedback_drop
+        )
+
     def watch() -> None:
-        """Every refresh_seconds: probe the model server, re-read the champion."""
+        """Every refresh_seconds: probe the model server, re-read the champion, and update
+        the like-rate gauges."""
         while True:
             MODEL_UP.set(1 if model.ping() else 0)
             try:
@@ -120,6 +131,14 @@ def create_app(
                     CHAMPION.info({"version": str(registry.champion_version)})
             except Exception:
                 log.warning("Couldn't refresh the champion from MLflow", exc_info=True)
+            try:
+                report = like_rate_report()
+                for window in ("recent", "baseline"):
+                    if report[f"{window}_like_rate"] is not None:
+                        LIKE_RATE.labels(window).set(report[f"{window}_like_rate"])
+                FEEDBACK_DRIFT.set(1 if report["drifted"] else 0)
+            except Exception:
+                log.warning("Couldn't compute the like rates", exc_info=True)
             if stop.wait(settings.refresh_seconds):
                 return
 
@@ -239,10 +258,23 @@ def create_app(
             version = registry.version_of_run(run_id) if run_id else None
         except Exception:  # still answer; the run ID alone identifies the model
             log.warning("Couldn't map run %s to a model version", run_id, exc_info=True)
+        # Exploration (D37): random tracks take the lowest-ranked slots, so feedback also
+        # covers songs the model wouldn't have picked, and the next model learns from them.
+        picks = registry.explore(
+            int(settings.exploration_rate * len(rows)),
+            exclude={str(r["track_id"]) for r in rows} | {body.track_id},
+        )
+        explored = [p["track_id"] for p in picks]
+        scores = registry.similarity(record, explored, run_id)
+        slots = range(len(rows) - len(picks), len(rows))
+        for pick, slot, score_ in zip(picks, slots, scores, strict=True):
+            rows[slot] = {**pick, "rank": rows[slot]["rank"], "score": score_}
+        EXPLORED.inc(len(picks))
+
         request_id = uuid4()
         track_ids = [str(r["track_id"]) for r in rows]
         store.save_recommendation(
-            request_id, body.track_id, sliders, body.k, version, run_id, track_ids
+            request_id, body.track_id, sliders, body.k, version, run_id, track_ids, explored
         )
         RECOMMENDATIONS.labels(str(version)).inc()
         why = registry.why(record, track_ids, run_id)
@@ -252,7 +284,11 @@ def create_app(
             model_run_id=run_id,
             recommendations=[
                 Recommendation(
-                    **_track(r), rank=int(r["rank"]), score=float(r["score"]), why=labels
+                    **_track(r),
+                    rank=int(r["rank"]),
+                    score=float(r["score"]),
+                    why=[] if r["track_id"] in explored else labels,
+                    explored=r["track_id"] in explored,
                 )
                 for r, labels in zip(rows, why, strict=True)
             ],
@@ -365,18 +401,25 @@ def create_app(
 
     @app.get("/drift", response_model=DriftReport, tags=["operator"])
     def drift() -> dict:
-        """Each incoming batch's drift from the training data (PSI and KS), newest first."""
+        """Each incoming batch's drift from the training data (PSI and KS), newest first,
+        and feedback drift: the like rate of the latest likes and skips against before."""
         try:
             seen = store.incoming_batches()
         except Exception:  # the report alone is still useful
             log.warning("Couldn't read the batch records", exc_info=True)
             seen = []
         view = drift_view(Path(settings.pipeline_dir), seen)
-        if view is None:
+        try:
+            likes = like_rate_report()
+        except Exception:
+            log.warning("Couldn't compute the like rates", exc_info=True)
+            likes = None
+        if view is None and not (likes and likes["recent_events"]):
             raise HTTPException(
                 404, "No drift report yet: the worker checks each batch dropped into data/incoming"
             )
-        return view
+        view = view or {"reference_rows": None, "thresholds": {}, "batches": []}
+        return {**view, "feedback": likes}
 
     @app.get("/health", response_model=Health, tags=["service"])
     def health(response: Response) -> Health:
