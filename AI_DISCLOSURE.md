@@ -53,4 +53,4 @@ What I did myself (check each line is true before submitting):
 
 ## 3. Impact
 
-To be written at the end of the project: how the tool shaped the final submission.
+This tool helped me really shape up my project and assisted me with the coding part of the project. I used Claude Code to generate the files I couldn't create by myself, and debugged a lot of bugs in between. It really sped up the entire process and helped me finish it much earlier than I thought I would.
