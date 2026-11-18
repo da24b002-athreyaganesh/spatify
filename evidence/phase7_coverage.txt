@@ -1,0 +1,68 @@
+uv run pytest --cov --cov-report=term-missing:skip-covered --cov-report=html
+........................................................................ [ 43%]
+........................................................................ [ 86%]
+......................                                                   [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /run/media/athreya-ganesh/CE72C02072C00EE1/Athreya/Acads/Courses/DA3408/Project/spatify/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/test_full_pipeline.py::test_the_whole_pipeline_trains_registers_and_serves_a_champion
+  /run/media/athreya-ganesh/CE72C02072C00EE1/Athreya/Acads/Courses/DA3408/Project/spatify/.venv/lib/python3.12/site-packages/mlflow/store/tracking/sqlalchemy_store.py:327: SADeprecationWarning: The ``noload`` loader strategy is deprecated and will be removed in a future release.  This option produces incorrect results by returning ``None`` for related items. (deprecated since: 2.1)
+    sqlalchemy.orm.configure_mappers()
+
+tests/test_full_pipeline.py::test_the_whole_pipeline_trains_registers_and_serves_a_champion
+tests/test_full_pipeline.py::test_the_whole_pipeline_trains_registers_and_serves_a_champion
+tests/test_registry.py::test_packaged_model_answers_through_pyfunc
+tests/test_registry.py::test_packaged_model_answers_through_pyfunc
+  /run/media/athreya-ganesh/CE72C02072C00EE1/Athreya/Acads/Courses/DA3408/Project/spatify/.venv/lib/python3.12/site-packages/mlflow/models/utils.py:211: Pandas4Warning: Operation with range is deprecated. In a future version these will be treated as scalar-like. To retain the old behavior, explicitly wrap in a Series instead.
+    if all(df.columns == range(len(df.columns))):
+
+tests/test_full_pipeline.py::test_the_whole_pipeline_trains_registers_and_serves_a_champion
+  /run/media/athreya-ganesh/CE72C02072C00EE1/Athreya/Acads/Courses/DA3408/Project/spatify/.venv/lib/python3.12/site-packages/mlflow/tracking/client.py:3482: Pandas4Warning: For backward compatibility, 'str' dtypes are included by select_dtypes when 'object' dtype is specified. This behavior is deprecated and will be removed in a future version. Explicitly pass 'str' to `include` to select them, or to `exclude` to remove them and silence this warning.
+  See https://pandas.pydata.org/docs/dev/user_guide/migration.html#string-migration-select-dtypes for details on how to write code that works with pandas 2 and 3.
+    if len(data.select_dtypes(include=["object"]).columns) > 0:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.15-final-0 _______________
+
+Name                                   Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------
+src/spatify/batches.py                    99     27     24      2    73%   39-40, 46-49, 159-165, 169-185, 189
+src/spatify/frontend/__main__.py          14      1      4      2    83%   22->24, 40
+src/spatify/frontend/api.py               79      8     12      3    88%   38-40, 46-47, 66-67, 127
+src/spatify/frontend/app.py               10     10      0      0     0%   8-26
+src/spatify/frontend/metrics.py           29      4      4      1    85%   36, 70-72
+src/spatify/frontend/ui.py                90      1     18      1    98%   199
+src/spatify/gateway/app.py               257     29     32      7    88%   91, 135->139, 143, 145-146, 147->131, 172, 195-197, 237, 251-252, 257-258, 262, 274-275, 341, 352-354, 437-439, 464-466, 470-472
+src/spatify/gateway/model_client.py       36      2      4      1    92%   49-50
+src/spatify/gateway/pipeline_view.py      65      2     18      0    98%   44-45
+src/spatify/gateway/registry.py          139     18     30      5    85%   53-54, 96-106, 131-132, 141->148, 146->141, 158-159, 170, 187, 189, 194-195
+src/spatify/gateway/settings.py           22      2      0      0    91%   36-37
+src/spatify/gateway/store.py              72     44      2      0    38%   26, 32-34, 37, 41-49, 52-57, 70-71, 80-81, 97-98, 108-115, 119-120, 132-133, 139-141, 155-156, 162-166, 170-171, 178-179
+src/spatify/model/evaluate.py            106     11     16      3    85%   127-133, 180-184, 203
+src/spatify/model/explain.py              29      1     12      2    93%   53, 68->63
+src/spatify/model/feedback.py             97      2     28      3    96%   83, 89->80, 119
+src/spatify/model/plots.py                61     17      4      1    69%   77-99
+src/spatify/model/pyfunc.py               59      1      2      1    97%   89
+src/spatify/model/recommender.py         103      1     24      1    98%   202
+src/spatify/model/register.py             97      7     18      3    91%   73, 100-104, 154-156, 215
+src/spatify/model/tracking.py             36      8      6      0    67%   21, 32-36, 57-58
+src/spatify/model/train.py               112      6     30      5    92%   60, 98->96, 171-172, 209-210, 227
+src/spatify/model_server.py              152     38     28      2    76%   90-91, 102-106, 119-120, 138-146, 196, 216-218, 223-252, 256
+src/spatify/pipeline/common.py            39      5      4      1    81%   43-47, 81
+src/spatify/pipeline/drift.py             53      2     12      2    94%   113, 117
+src/spatify/pipeline/features.py          76      3      6      2    94%   120-121, 149
+src/spatify/pipeline/ingest.py            42      3      2      1    91%   42-43, 81
+src/spatify/pipeline/validate.py          86      6     10      2    92%   76-77, 81, 140-141, 173
+src/spatify/worker/__main__.py            44     44     14      0     0%   7-62
+src/spatify/worker/runner.py              55     17     20      1    65%   54, 60-86
+src/spatify/worker/store.py               50     50      6      0     0%   3-120
+src/spatify/worker/worker.py             232     22     76      7    89%   125, 130-147, 208-212, 213->233, 263-264, 277->279, 292->307, 324->318
+----------------------------------------------------------------------------------
+TOTAL                                   2750    392    486     59    84%
+
+15 files skipped due to complete coverage.
+Coverage HTML written to dir reports/coverage
+166 passed, 7 warnings in 51.88s

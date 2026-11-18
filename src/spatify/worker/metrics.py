@@ -12,6 +12,12 @@ disable_created_metrics()
 RUNS = Counter(
     "spatify_pipeline_runs_total", "Pipeline runs, by trigger and result", ["trigger", "status"]
 )
+# Export every trigger and result at 0 from start-up. A labelled series otherwise first
+# appears at 1, and increase() sees no change, so the PipelineRunFailed alert would miss
+# the first failure after every worker restart (found in step 7.2, D41).
+for _trigger in ("manual", "new_data", "drift", "feedback"):
+    for _status in ("succeeded", "failed"):
+        RUNS.labels(_trigger, _status)
 RUN_SECONDS = Histogram(
     "spatify_pipeline_run_seconds",
     "Wall-clock time of a pipeline run, by trigger",

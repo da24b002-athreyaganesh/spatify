@@ -159,6 +159,13 @@ def _quote(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
 
+# Streamlit gives a chart without its own autosize the type "fit", which squeezes the title,
+# the axes and the marks into the declared height: the bars came out a few pixels tall and
+# the title was clipped. "fit-x" fits the width only; the height is then the plotting area,
+# with the title and axes added around it.
+FIT_WIDTH = alt.AutoSizeParams(type="fit-x", contains="padding")
+
+
 def dag_dot(dag: dict) -> str:
     """The pipeline as Graphviz DOT: stages coloured by their last result, inputs as data."""
     lines = [
@@ -173,14 +180,14 @@ def dag_dot(dag: dict) -> str:
         )
     for stage in dag["stages"]:
         fill, text = STATUS_COLOURS.get(stage["status"], STATUS_COLOURS["not run"])
-        label = stage["name"]
-        if "rows_per_s" in stage["metrics"]:
-            label += f"\\n{stage['metrics']['rows_per_s']:,.0f} rows/s"
+        label = _quote(stage["name"])
+        if "rows_per_s" in stage["metrics"]:  # a second line: DOT's \\n, not an escaped one
+            label += "\\n" + _quote(f"{stage['metrics']['rows_per_s']:,.0f} rows/s")
         tooltip = f"{stage['status']}: {stage['command']}"
         lines.append(
             f'  "{_quote(stage["name"])}" [shape=box, style="rounded,filled", '
             f'fillcolor="{fill}", fontcolor="{text}", color="{fill}", '
-            f'label="{_quote(label)}", tooltip="{_quote(tooltip)}"];'
+            f'label="{label}", tooltip="{_quote(tooltip)}"];'
         )
     for source, target in dag["edges"]:
         lines.append(f'  "{_quote(source)}" -> "{_quote(target)}";')
@@ -215,7 +222,7 @@ def throughput_chart(stages: list[dict]) -> alt.Chart | None:
             y=alt.Y("stage:N", title="pipeline stage", sort=None),
             tooltip=[alt.Tooltip("stage:N"), alt.Tooltip("rows_per_s:Q", format=",.0f")],
         )  # fmt: skip
-        .properties(height=40 * len(rows) + 60)
+        .properties(height=36 * len(rows) + 20, autosize=FIT_WIDTH)
     )
 
 
@@ -264,7 +271,7 @@ def like_rate_chart(versions: list[dict]) -> alt.Chart | None:
             ),
             tooltip=["version", alt.Tooltip("like_rate:Q", format=".1f"), "feedback", "role"],
         )  # fmt: skip
-        .properties(height=40 * len(rows) + 60)
+        .properties(height=36 * len(rows) + 20, autosize=FIT_WIDTH)
     )
 
 
@@ -311,5 +318,6 @@ def drift_chart(batch: dict, thresholds: dict) -> alt.Chart:
             subtitle="How far each feature moved from the training data; dashed lines: "
             "0.1 moderate, 0.2 major.",
         ),
-        height=28 * len(rows) + 60,
+        height=28 * len(rows) + 20,
+        autosize=FIT_WIDTH,
     )

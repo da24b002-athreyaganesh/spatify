@@ -69,6 +69,7 @@ from spatify.gateway.schemas import (
     PipelineDag,
     PipelineRun,
     PipelineStatus,
+    Problem,
     Recommendation,
     RecommendRequest,
     RecommendResponse,
@@ -84,6 +85,14 @@ from spatify.gateway.store import Store
 log = logging.getLogger("spatify.gateway")
 
 QUIET = {"/metrics", "/health"}  # polled every few seconds; logged at DEBUG only
+
+STORE_DOWN = "The feedback store (Postgres) is unavailable"
+NO_KEY = "Admin actions are disabled: API_KEY_SHA256 isn't set"
+
+
+def errors(codes: dict[int, str]) -> dict[int, dict]:
+    """OpenAPI entries for the errors a route can answer with (shown at /docs, the LLD)."""
+    return {code: {"model": Problem, "description": text} for code, text in codes.items()}
 
 
 def _text(value) -> str | None:
@@ -169,7 +178,7 @@ def create_app(
     def key_ok(key: str | None) -> bool:
         """True for the key whose SHA-256 is in API_KEY_SHA256 (D28)."""
         if not settings.api_key_sha256:
-            raise HTTPException(503, "Admin actions are disabled: API_KEY_SHA256 is not set")
+            raise HTTPException(503, NO_KEY)
         given = hashlib.sha256((key or "").encode()).hexdigest()
         return key is not None and hmac.compare_digest(given, settings.api_key_sha256)
 
@@ -261,7 +270,17 @@ def create_app(
     def root() -> RedirectResponse:
         return RedirectResponse("/docs")
 
-    @app.post("/recommend", response_model=RecommendResponse, tags=["listener"])
+    @app.post(
+        "/recommend",
+        response_model=RecommendResponse,
+        tags=["listener"],
+        responses=errors({
+            400: "The query can't be answered: no seed and no slider this model uses",
+            404: "The seed track isn't in the served model's catalogue (see /tracks/search)",
+            503: "The model server is starting or switching versions (try again in a few "
+                 "seconds), or the feedback store is unavailable",
+        }),
+    )  # fmt: skip
     def recommend(body: RecommendRequest) -> RecommendResponse:
         """Top-k tracks for a seed track, slider values, or both."""
         sliders = body.sliders.model_dump(exclude_none=True)
@@ -309,7 +328,17 @@ def create_app(
             ],
         )
 
-    @app.post("/feedback", response_model=FeedbackResponse, status_code=201, tags=["listener"])
+    @app.post(
+        "/feedback",
+        response_model=FeedbackResponse,
+        status_code=201,
+        tags=["listener"],
+        responses=errors({
+            400: "That track wasn't in this recommendation list",
+            404: "Unknown request_id: feedback must refer to a list from /recommend",
+            503: STORE_DOWN,
+        }),
+    )  # fmt: skip
     def feedback(body: FeedbackRequest) -> FeedbackResponse:
         """A like or skip on one track of a list from /recommend."""
         shown = store.get_recommendation(body.request_id)
@@ -330,10 +359,15 @@ def create_app(
         FEEDBACK_RANK.labels(body.action, str(shown["model_version"])).observe(rank)
         return FeedbackResponse(model_version=shown["model_version"])
 
-    @app.get("/tracks/search", response_model=SearchResponse, tags=["listener"])
+    @app.get(
+        "/tracks/search",
+        response_model=SearchResponse,
+        tags=["listener"],
+        responses=errors({503: "No model is being served yet, so there's nothing to search"}),
+    )
     def search(
         q: str = Query(min_length=2, max_length=100, description="Part of a title or artist"),
-        limit: int = Query(10, ge=1, le=50),
+        limit: int = Query(10, ge=1, le=50, description="Most tracks to return"),
     ) -> SearchResponse:
         """Seed tracks the served model knows, best title matches first."""
         found = registry.search(q, limit)
@@ -343,7 +377,12 @@ def create_app(
         tracks = [Track(**_track(row)) for row in hits.to_dict("records")]
         return SearchResponse(query=q, model_version=version, tracks=tracks)
 
-    @app.get("/models", response_model=ModelsResponse, tags=["operator"])
+    @app.get(
+        "/models",
+        response_model=ModelsResponse,
+        tags=["operator"],
+        responses=errors({503: "The model registry (MLflow) is unavailable"}),
+    )
     def models() -> ModelsResponse:
         """Registered versions, their aliases, lineage and like rate."""
         aliases = registry.aliases()
@@ -371,7 +410,13 @@ def create_app(
         response_model=RollbackResponse,
         tags=["operator"],
         dependencies=[Depends(require_api_key)],
-    )
+        responses=errors({
+            401: "Missing or wrong X-API-Key header",
+            409: "Impossible rollback: no champion, no `previous`, the version is already "
+                 "the champion, or it doesn't exist",
+            503: "The model registry is unavailable, or admin actions are disabled",
+        }),
+    )  # fmt: skip
     def rollback(body: RollbackRequest | None = None) -> RollbackResponse:
         """Make an earlier version champion (default: `previous`)."""
         champion, previous = registry.rollback(body.version if body else None)
@@ -389,6 +434,12 @@ def create_app(
         status_code=204,
         dependencies=[Depends(require_bearer_key)],
         tags=["service"],
+        responses=errors(
+            {
+                401: "Missing or wrong Bearer token",
+                503: f"{STORE_DOWN}, or admin actions are disabled",
+            }
+        ),
     )
     def receive_alerts(body: AlertmanagerWebhook) -> Response:
         """Alertmanager's webhook: record each alert, firing or resolved (D41)."""
@@ -419,17 +470,36 @@ def create_app(
         store.save_alerts(rows)
         return Response(status_code=204)
 
-    @app.get("/alerts", response_model=list[AlertRecord], tags=["operator"])
-    def alerts(limit: int = Query(50, ge=1, le=500)) -> list[dict]:
+    @app.get(
+        "/alerts",
+        response_model=list[AlertRecord],
+        tags=["operator"],
+        responses=errors({503: STORE_DOWN}),
+    )
+    def alerts(
+        limit: int = Query(50, ge=1, le=500, description="Most alerts to return"),
+    ) -> list[dict]:
         """Alerts from Prometheus (through Alertmanager): firing first, then the latest."""
         return store.alerts(limit)
 
-    @app.get("/pipeline/runs", response_model=list[PipelineRun], tags=["operator"])
-    def pipeline_runs(limit: int = Query(20, ge=1, le=200)) -> list[dict]:
+    @app.get(
+        "/pipeline/runs",
+        response_model=list[PipelineRun],
+        tags=["operator"],
+        responses=errors({503: STORE_DOWN}),
+    )
+    def pipeline_runs(
+        limit: int = Query(20, ge=1, le=200, description="Most runs to return"),
+    ) -> list[dict]:
         """Recent pipeline runs, newest first."""
         return store.pipeline_runs(limit)
 
-    @app.get("/pipeline/dag", response_model=PipelineDag, tags=["operator"])
+    @app.get(
+        "/pipeline/dag",
+        response_model=PipelineDag,
+        tags=["operator"],
+        responses=errors({503: "The pipeline files (dvc.yaml, dvc.lock) aren't mounted"}),
+    )
     def pipeline_dag() -> dict:
         """The DVC pipeline: stages, data flow, each stage's last result and throughput."""
         try:
@@ -439,7 +509,12 @@ def create_app(
             runs = []
         return load_dag(Path(settings.pipeline_dir), runs[0] if runs else None)
 
-    @app.get("/pipeline/status", response_model=PipelineStatus, tags=["operator"])
+    @app.get(
+        "/pipeline/status",
+        response_model=PipelineStatus,
+        tags=["operator"],
+        responses=errors({503: STORE_DOWN}),
+    )
     def pipeline_status() -> PipelineStatus:
         runs = store.pipeline_runs(1)
         return PipelineStatus(latest=runs[0] if runs else None, counts=store.pipeline_counts())
@@ -450,12 +525,23 @@ def create_app(
         status_code=202,
         tags=["operator"],
         dependencies=[Depends(require_api_key)],
+        responses=errors(
+            {
+                401: "Missing or wrong X-API-Key header",
+                503: f"{STORE_DOWN}, or admin actions are disabled",
+            }
+        ),
     )
     def trigger(body: TriggerRequest | None = None) -> dict:
         """Queue a pipeline run; the worker picks it up."""
         return store.request_pipeline_run((body or TriggerRequest()).trigger)
 
-    @app.get("/drift", response_model=DriftReport, tags=["operator"])
+    @app.get(
+        "/drift",
+        response_model=DriftReport,
+        tags=["operator"],
+        responses=errors({404: "No drift report yet: no batch checked and no feedback"}),
+    )
     def drift() -> dict:
         """Each incoming batch's drift from the training data (PSI and KS), newest first,
         and feedback drift: the like rate of the latest likes and skips against before."""
@@ -477,7 +563,12 @@ def create_app(
         view = view or {"reference_rows": None, "thresholds": {}, "batches": []}
         return {**view, "feedback": likes}
 
-    @app.get("/health", response_model=Health, tags=["service"])
+    @app.get(
+        "/health",
+        response_model=Health,
+        tags=["service"],
+        responses={503: {"model": Health, "description": "Postgres or the model server is down"}},
+    )
     def health(response: Response) -> Health:
         """200 only when recommendations can be served: Postgres and the model server answer."""
         checks = {

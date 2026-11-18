@@ -14,12 +14,12 @@
 - 89,741 unique track IDs; 16,299 tracks appear under more than one genre.
 - 450 exact duplicate rows.
 - One row has no `artists`, `album_name` or `track_name`.
-- `tempo`, `duration_ms` and `time_signature` contain zeros, which are probably missing values rather than measurements.
+- `tempo`, `duration_ms` and `time_signature` contain zeros, which are probably missing values rather than measurements. Zero tempo and time signature are kept with a warning, since they are mostly silent "sleep" tracks (D10).
 - No release-year or date column, so the problem statement's "era" shift is simulated (the `drift` settings in `params.yaml`).
 
 ## Known biases and limits
 
 - The genre balance is artificial: 1,000 tracks per genre, whatever the genre's real catalogue size or listening share.
-- Genre labels overlap (16,299 tracks carry several), which affects any genre-based metric. Phase 1 decides how to handle them.
+- Genre labels overlap (16,299 tracks carry several), which affects any genre-based metric. Such tracks are merged into one row with every genre listed, and a recommendation counts as a genre match when it shares any genre with the seed (D11, D17).
 - `popularity` reflects plays at collection time; the card notes that tracks played a lot now score higher than tracks played a lot in the past.
 - These are audio features only: no listening history, so there are no real user preferences to evaluate against. Feedback comes from a simulation script (stated in the README and the report).

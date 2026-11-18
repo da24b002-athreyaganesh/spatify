@@ -49,16 +49,16 @@ class RecommendRequest(BaseModel):
 
 
 class Track(BaseModel):
-    track_id: str
-    track_name: str | None
-    artists: str | None
-    album_name: str | None
-    genres: list[str]
-    popularity: int
+    track_id: str = Field(description="Spotify track ID")
+    track_name: str | None = Field(description="Title")
+    artists: str | None = Field(description="Artists, separated by ';'")
+    album_name: str | None = Field(description="Album")
+    genres: list[str] = Field(description="Every genre the track is listed under")
+    popularity: int = Field(description="Spotify popularity, 0-100")
 
 
 class Recommendation(Track):
-    rank: int
+    rank: int = Field(description="1 is the closest match")
     score: float = Field(description="Cosine similarity to the query, -1 to 1")
     why: list[str] = Field(
         default_factory=list,
@@ -72,50 +72,54 @@ class Recommendation(Track):
 class RecommendResponse(BaseModel):
     request_id: UUID = Field(description="Send this back with feedback on these tracks")
     model_version: int | None = Field(description="Registry version that answered")
-    model_run_id: str
-    recommendations: list[Recommendation]
+    model_run_id: str = Field(description="MLflow run that trained the answering model")
+    recommendations: list[Recommendation] = Field(description="Best match first")
 
 
 class FeedbackRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    request_id: UUID
-    track_id: str = Field(min_length=1, max_length=64)
-    action: Literal["like", "skip"]
+    request_id: UUID = Field(description="From the /recommend answer the track was in")
+    track_id: str = Field(min_length=1, max_length=64, description="A track in that list")
+    action: Literal["like", "skip"] = Field(description="What the listener thought of it")
 
 
 class FeedbackResponse(BaseModel):
     status: Literal["recorded"] = "recorded"
-    model_version: int | None
+    model_version: int | None = Field(description="The version that made the list")
 
 
 class SearchResponse(BaseModel):
-    query: str
-    model_version: int
-    tracks: list[Track]
+    query: str = Field(description="The text searched for")
+    model_version: int = Field(description="The version whose catalogue was searched")
+    tracks: list[Track] = Field(description="Title matches first, then artist matches")
 
 
 class ModelVersion(BaseModel):
-    version: int
-    aliases: list[str]
-    run_id: str
-    created_at: datetime
-    description: str | None
-    variant: str | None
-    dataset_version: str | None
-    git_commit: str | None
-    trigger: str | None
-    likes: int = 0
-    skips: int = 0
+    version: int = Field(description="Registry version number")
+    aliases: list[str] = Field(
+        description="champion (served), previous (rollback target), challenger"
+    )
+    run_id: str = Field(description="MLflow run that trained it")
+    created_at: datetime = Field(description="When it was registered")
+    description: str | None = Field(description="The promotion gate's verdict")
+    variant: str | None = Field(description="Feature set and weighting, e.g. all-feedback")
+    dataset_version: str | None = Field(description="DVC hash of the data it was trained on")
+    git_commit: str | None = Field(description="Commit of the code that trained it")
+    trigger: str | None = Field(
+        description="What started its run: manual, new_data, drift, feedback, ci, forced_bad"
+    )
+    likes: int = Field(0, description="Likes on lists it served")
+    skips: int = Field(0, description="Skips on lists it served")
     like_rate: float | None = Field(None, description="likes / (likes + skips)")
 
 
 class ModelsResponse(BaseModel):
-    name: str
-    champion: int | None
-    previous: int | None
-    challenger: int | None
-    versions: list[ModelVersion]
+    name: str = Field(description="Registered model name")
+    champion: int | None = Field(description="The version listeners get")
+    previous: int | None = Field(description="The rollback target")
+    challenger: int | None = Field(description="The latest version the gate didn't promote")
+    versions: list[ModelVersion] = Field(description="Newest first")
 
 
 class RollbackRequest(BaseModel):
@@ -125,33 +129,33 @@ class RollbackRequest(BaseModel):
 
 
 class RollbackResponse(BaseModel):
-    champion: int
-    previous: int
-    detail: str
+    champion: int = Field(description="The version now served")
+    previous: int = Field(description="The version it replaced (the next rollback's default)")
+    detail: str = Field(description="What happens next, in words")
 
 
 class PipelineRun(BaseModel):
-    id: int
-    requested_at: datetime
-    started_at: datetime | None
-    finished_at: datetime | None
-    trigger: str
-    status: str
-    stages: dict
-    model_version: int | None
-    promoted: bool | None
-    message: str | None
+    id: int = Field(description="Run number")
+    requested_at: datetime = Field(description="When it was queued or the worker started it")
+    started_at: datetime | None = Field(description="Empty until the worker picks it up")
+    finished_at: datetime | None = Field(description="Empty while it runs")
+    trigger: str = Field(description="manual, new_data, drift or feedback")
+    status: str = Field(description="requested, running, succeeded or failed")
+    stages: dict = Field(description="Per stage: its result and seconds")
+    model_version: int | None = Field(description="The version this run registered, if any")
+    promoted: bool | None = Field(description="Whether that version became champion")
+    message: str | None = Field(description="One-line explanation of what happened")
 
 
 class PipelineStatus(BaseModel):
-    latest: PipelineRun | None
+    latest: PipelineRun | None = Field(description="The newest run")
     counts: dict[str, int] = Field(description="Runs per status")
 
 
 class StageView(BaseModel):
-    name: str
+    name: str = Field(description="Stage name in dvc.yaml")
     status: str = Field(description="ok, failed, running or not run: the stage's last result")
-    command: str
+    command: str = Field(description="The stage's command")
     metrics: dict[str, float] = Field(description="Rows, seconds, rows per second, ...")
 
 
@@ -162,37 +166,39 @@ class PipelineDag(BaseModel):
 
 
 class DriftFeature(BaseModel):
-    feature: str
+    feature: str = Field(description="Audio feature")
     psi: float = Field(description="Population Stability Index against the training data")
     ks_stat: float = Field(description="Kolmogorov-Smirnov statistic")
-    ks_pvalue: float
+    ks_pvalue: float = Field(description="KS test p-value (reported; PSI decides)")
     level: str = Field(description="stable (< 0.1), moderate (0.1-0.2) or major (>= 0.2)")
 
 
 class DriftBatch(BaseModel):
-    name: str
+    name: str = Field(description="File name in data/incoming")
     status: str = Field(description="new, processed, quarantined, failed, removed or unknown")
-    first_seen: datetime | None
-    message: str | None
+    first_seen: datetime | None = Field(description="When the worker first saw it")
+    message: str | None = Field(description="What became of it")
     rows: int | None = Field(description="Valid rows checked; none if validation rejected it")
-    drifted: bool | None
-    features: list[DriftFeature]
+    drifted: bool | None = Field(description="Whether it drifted; empty if it wasn't checked")
+    features: list[DriftFeature] = Field(
+        description="One row per audio feature; empty if not checked"
+    )
 
 
 class FeedbackDrift(BaseModel):
-    recent_events: int
-    recent_like_rate: float | None
-    baseline_events: int
-    baseline_like_rate: float | None
+    recent_events: int = Field(description="Ratings in the recent window")
+    recent_like_rate: float | None = Field(description="Like rate of the latest ratings")
+    baseline_events: int = Field(description="Ratings in the window before")
+    baseline_like_rate: float | None = Field(description="Like rate of the ratings before")
     drop: float | None = Field(description="baseline like rate minus recent like rate")
-    threshold: float
-    enough_feedback: bool
-    drifted: bool
+    threshold: float = Field(description="The drop that counts as drift")
+    enough_feedback: bool = Field(description="Whether both windows have enough ratings to judge")
+    drifted: bool = Field(description="True when the drop reaches the threshold")
 
 
 class DriftReport(BaseModel):
     reference_rows: int | None = Field(description="Training rows the batches are compared with")
-    thresholds: dict[str, float]
+    thresholds: dict[str, float] = Field(description="PSI levels: moderate and major")
     batches: list[DriftBatch] = Field(description="Newest first")
     feedback: FeedbackDrift | None = Field(None, description="The like rate: recent vs before")
 
@@ -215,13 +221,13 @@ class AlertmanagerWebhook(BaseModel):
 
 
 class AlertRecord(BaseModel):
-    fingerprint: str
-    alertname: str
-    status: Literal["firing", "resolved"]
-    severity: str | None
-    summary: str | None
-    description: str | None
-    starts_at: datetime
+    fingerprint: str = Field(description="Alertmanager's ID for the alert")
+    alertname: str = Field(description="The rule's name, e.g. DataDrift")
+    status: Literal["firing", "resolved"] = Field(description="firing or resolved")
+    severity: str | None = Field(description="warning or critical")
+    summary: str | None = Field(description="One line")
+    description: str | None = Field(description="What it means and what to do")
+    starts_at: datetime = Field(description="When it started firing")
     ends_at: datetime | None = Field(description="Empty while firing")
     received_at: datetime = Field(description="When the latest notice arrived")
 
@@ -232,6 +238,17 @@ class TriggerRequest(BaseModel):
     trigger: Literal["manual"] = "manual"
 
 
+class Problem(BaseModel):
+    """The body of every error answer (4xx, 5xx); 422 adds the field that failed."""
+
+    detail: str = Field(description="What went wrong, in words a person can act on")
+    request_id: str | None = Field(None, description="Only on 500: quote it when reporting")
+
+
 class Health(BaseModel):
-    status: Literal["ok", "unavailable"]
-    checks: dict[str, str]
+    status: Literal["ok", "unavailable"] = Field(
+        description="ok only when recommendations can be served"
+    )
+    checks: dict[str, str] = Field(
+        description="postgres, model_server and registry, each ok or what's wrong"
+    )

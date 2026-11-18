@@ -1,0 +1,2231 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Spatify gateway",
+    "description": "Cold-start music recommendations, feedback and model operations.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/recommend": {
+      "post": {
+        "tags": [
+          "listener"
+        ],
+        "summary": "Recommend",
+        "description": "Top-k tracks for a seed track, slider values, or both.",
+        "operationId": "recommend_recommend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query can't be answered: no seed and no slider this model uses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The seed track isn't in the served model's catalogue (see /tracks/search)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The model server is starting or switching versions (try again in a few seconds), or the feedback store is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feedback": {
+      "post": {
+        "tags": [
+          "listener"
+        ],
+        "summary": "Feedback",
+        "description": "A like or skip on one track of a list from /recommend.",
+        "operationId": "feedback_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "That track wasn't in this recommendation list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown request_id: feedback must refer to a list from /recommend",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The feedback store (Postgres) is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tracks/search": {
+      "get": {
+        "tags": [
+          "listener"
+        ],
+        "summary": "Search",
+        "description": "Seed tracks the served model knows, best title matches first.",
+        "operationId": "search_tracks_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100,
+              "description": "Part of a title or artist",
+              "title": "Q"
+            },
+            "description": "Part of a title or artist"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Most tracks to return",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Most tracks to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No model is being served yet, so there's nothing to search",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Models",
+        "description": "Registered versions, their aliases, lineage and like rate.",
+        "operationId": "models_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The model registry (MLflow) is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/rollback": {
+      "post": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Rollback",
+        "description": "Make an earlier version champion (default: `previous`).",
+        "operationId": "rollback_models_rollback_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RollbackRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong X-API-Key header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Impossible rollback: no champion, no `previous`, the version is already the champion, or it doesn't exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The model registry is unavailable, or admin actions are disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Receive Alerts",
+        "description": "Alertmanager's webhook: record each alert, firing or resolved (D41).",
+        "operationId": "receive_alerts_alerts_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertmanagerWebhook"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or wrong Bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The feedback store (Postgres) is unavailable, or admin actions are disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Alerts",
+        "description": "Alerts from Prometheus (through Alertmanager): firing first, then the latest.",
+        "operationId": "alerts_alerts_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "Most alerts to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Most alerts to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlertRecord"
+                  },
+                  "title": "Response Alerts Alerts Get"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The feedback store (Postgres) is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/runs": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Pipeline Runs",
+        "description": "Recent pipeline runs, newest first.",
+        "operationId": "pipeline_runs_pipeline_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Most runs to return",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Most runs to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PipelineRun"
+                  },
+                  "title": "Response Pipeline Runs Pipeline Runs Get"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The feedback store (Postgres) is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/dag": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Pipeline Dag",
+        "description": "The DVC pipeline: stages, data flow, each stage's last result and throughput.",
+        "operationId": "pipeline_dag_pipeline_dag_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineDag"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The pipeline files (dvc.yaml, dvc.lock) aren't mounted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/status": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Pipeline Status",
+        "operationId": "pipeline_status_pipeline_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineStatus"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The feedback store (Postgres) is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/trigger": {
+      "post": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Trigger",
+        "description": "Queue a pipeline run; the worker picks it up.",
+        "operationId": "trigger_pipeline_trigger_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TriggerRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong X-API-Key header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The feedback store (Postgres) is unavailable, or admin actions are disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drift": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Drift",
+        "description": "Each incoming batch's drift from the training data (PSI and KS), newest first,\nand feedback drift: the like rate of the latest likes and skips against before.",
+        "operationId": "drift_drift_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No drift report yet: no batch checked and no feedback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Health",
+        "description": "200 only when recommendations can be served: Postgres and the model server answer.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Postgres or the model server is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertRecord": {
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint",
+            "description": "Alertmanager's ID for the alert"
+          },
+          "alertname": {
+            "type": "string",
+            "title": "Alertname",
+            "description": "The rule's name, e.g. DataDrift"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "firing",
+              "resolved"
+            ],
+            "title": "Status",
+            "description": "firing or resolved"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity",
+            "description": "warning or critical"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary",
+            "description": "One line"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "What it means and what to do"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "When it started firing"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At",
+            "description": "Empty while firing"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At",
+            "description": "When the latest notice arrived"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fingerprint",
+          "alertname",
+          "status",
+          "severity",
+          "summary",
+          "description",
+          "starts_at",
+          "ends_at",
+          "received_at"
+        ],
+        "title": "AlertRecord"
+      },
+      "AlertmanagerAlert": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "firing",
+              "resolved"
+            ],
+            "title": "Status"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Labels"
+          },
+          "annotations": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Annotations"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startsat"
+          },
+          "endsAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endsat"
+          },
+          "fingerprint": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Fingerprint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "labels",
+          "startsAt",
+          "fingerprint"
+        ],
+        "title": "AlertmanagerAlert",
+        "description": "One alert in Alertmanager's webhook payload (the fields Spatify keeps)."
+      },
+      "AlertmanagerWebhook": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/AlertmanagerAlert"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Alerts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerts"
+        ],
+        "title": "AlertmanagerWebhook",
+        "description": "What Alertmanager posts to a webhook receiver; other fields are ignored."
+      },
+      "DriftBatch": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "File name in data/incoming"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "new, processed, quarantined, failed, removed or unknown"
+          },
+          "first_seen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen",
+            "description": "When the worker first saw it"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "What became of it"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows",
+            "description": "Valid rows checked; none if validation rejected it"
+          },
+          "drifted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drifted",
+            "description": "Whether it drifted; empty if it wasn't checked"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/DriftFeature"
+            },
+            "type": "array",
+            "title": "Features",
+            "description": "One row per audio feature; empty if not checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "first_seen",
+          "message",
+          "rows",
+          "drifted",
+          "features"
+        ],
+        "title": "DriftBatch"
+      },
+      "DriftFeature": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature",
+            "description": "Audio feature"
+          },
+          "psi": {
+            "type": "number",
+            "title": "Psi",
+            "description": "Population Stability Index against the training data"
+          },
+          "ks_stat": {
+            "type": "number",
+            "title": "Ks Stat",
+            "description": "Kolmogorov-Smirnov statistic"
+          },
+          "ks_pvalue": {
+            "type": "number",
+            "title": "Ks Pvalue",
+            "description": "KS test p-value (reported; PSI decides)"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level",
+            "description": "stable (< 0.1), moderate (0.1-0.2) or major (>= 0.2)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "psi",
+          "ks_stat",
+          "ks_pvalue",
+          "level"
+        ],
+        "title": "DriftFeature"
+      },
+      "DriftReport": {
+        "properties": {
+          "reference_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Rows",
+            "description": "Training rows the batches are compared with"
+          },
+          "thresholds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Thresholds",
+            "description": "PSI levels: moderate and major"
+          },
+          "batches": {
+            "items": {
+              "$ref": "#/components/schemas/DriftBatch"
+            },
+            "type": "array",
+            "title": "Batches",
+            "description": "Newest first"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackDrift"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The like rate: recent vs before"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reference_rows",
+          "thresholds",
+          "batches"
+        ],
+        "title": "DriftReport"
+      },
+      "FeedbackDrift": {
+        "properties": {
+          "recent_events": {
+            "type": "integer",
+            "title": "Recent Events",
+            "description": "Ratings in the recent window"
+          },
+          "recent_like_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Like Rate",
+            "description": "Like rate of the latest ratings"
+          },
+          "baseline_events": {
+            "type": "integer",
+            "title": "Baseline Events",
+            "description": "Ratings in the window before"
+          },
+          "baseline_like_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Like Rate",
+            "description": "Like rate of the ratings before"
+          },
+          "drop": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drop",
+            "description": "baseline like rate minus recent like rate"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold",
+            "description": "The drop that counts as drift"
+          },
+          "enough_feedback": {
+            "type": "boolean",
+            "title": "Enough Feedback",
+            "description": "Whether both windows have enough ratings to judge"
+          },
+          "drifted": {
+            "type": "boolean",
+            "title": "Drifted",
+            "description": "True when the drop reaches the threshold"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recent_events",
+          "recent_like_rate",
+          "baseline_events",
+          "baseline_like_rate",
+          "drop",
+          "threshold",
+          "enough_feedback",
+          "drifted"
+        ],
+        "title": "FeedbackDrift"
+      },
+      "FeedbackRequest": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id",
+            "description": "From the /recommend answer the track was in"
+          },
+          "track_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Track Id",
+            "description": "A track in that list"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "like",
+              "skip"
+            ],
+            "title": "Action",
+            "description": "What the listener thought of it"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "track_id",
+          "action"
+        ],
+        "title": "FeedbackRequest"
+      },
+      "FeedbackResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "recorded",
+            "title": "Status",
+            "default": "recorded"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version",
+            "description": "The version that made the list"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_version"
+        ],
+        "title": "FeedbackResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Status",
+            "description": "ok only when recommendations can be served"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Checks",
+            "description": "postgres, model_server and registry, each ok or what's wrong"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "Health"
+      },
+      "ModelVersion": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "Registry version number"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases",
+            "description": "champion (served), previous (rollback target), challenger"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "MLflow run that trained it"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When it was registered"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "The promotion gate's verdict"
+          },
+          "variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant",
+            "description": "Feature set and weighting, e.g. all-feedback"
+          },
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version",
+            "description": "DVC hash of the data it was trained on"
+          },
+          "git_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Commit",
+            "description": "Commit of the code that trained it"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger",
+            "description": "What started its run: manual, new_data, drift, feedback, ci, forced_bad"
+          },
+          "likes": {
+            "type": "integer",
+            "title": "Likes",
+            "description": "Likes on lists it served",
+            "default": 0
+          },
+          "skips": {
+            "type": "integer",
+            "title": "Skips",
+            "description": "Skips on lists it served",
+            "default": 0
+          },
+          "like_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Like Rate",
+            "description": "likes / (likes + skips)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "aliases",
+          "run_id",
+          "created_at",
+          "description",
+          "variant",
+          "dataset_version",
+          "git_commit",
+          "trigger"
+        ],
+        "title": "ModelVersion"
+      },
+      "ModelsResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Registered model name"
+          },
+          "champion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Champion",
+            "description": "The version listeners get"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous",
+            "description": "The rollback target"
+          },
+          "challenger": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Challenger",
+            "description": "The latest version the gate didn't promote"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ModelVersion"
+            },
+            "type": "array",
+            "title": "Versions",
+            "description": "Newest first"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "champion",
+          "previous",
+          "challenger",
+          "versions"
+        ],
+        "title": "ModelsResponse"
+      },
+      "PipelineDag": {
+        "properties": {
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageView"
+            },
+            "type": "array",
+            "title": "Stages",
+            "description": "In dvc.yaml order"
+          },
+          "inputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Inputs",
+            "description": "Data the pipeline reads but no stage produces"
+          },
+          "edges": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Edges",
+            "description": "(from, to): stage or input to stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stages",
+          "inputs",
+          "edges"
+        ],
+        "title": "PipelineDag"
+      },
+      "PipelineRun": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Run number"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At",
+            "description": "When it was queued or the worker started it"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "Empty until the worker picks it up"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At",
+            "description": "Empty while it runs"
+          },
+          "trigger": {
+            "type": "string",
+            "title": "Trigger",
+            "description": "manual, new_data, drift or feedback"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "requested, running, succeeded or failed"
+          },
+          "stages": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Stages",
+            "description": "Per stage: its result and seconds"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version",
+            "description": "The version this run registered, if any"
+          },
+          "promoted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promoted",
+            "description": "Whether that version became champion"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "One-line explanation of what happened"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "requested_at",
+          "started_at",
+          "finished_at",
+          "trigger",
+          "status",
+          "stages",
+          "model_version",
+          "promoted",
+          "message"
+        ],
+        "title": "PipelineRun"
+      },
+      "PipelineStatus": {
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PipelineRun"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The newest run"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts",
+            "description": "Runs per status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latest",
+          "counts"
+        ],
+        "title": "PipelineStatus"
+      },
+      "Problem": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "What went wrong, in words a person can act on"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id",
+            "description": "Only on 500: quote it when reporting"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "Problem",
+        "description": "The body of every error answer (4xx, 5xx); 422 adds the field that failed."
+      },
+      "RecommendRequest": {
+        "properties": {
+          "track_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Id",
+            "description": "Seed track, from /tracks/search"
+          },
+          "sliders": {
+            "$ref": "#/components/schemas/Sliders"
+          },
+          "k": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "K",
+            "description": "Number of recommendations",
+            "default": 10
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RecommendRequest"
+      },
+      "RecommendResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id",
+            "description": "Send this back with feedback on these tracks"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version",
+            "description": "Registry version that answered"
+          },
+          "model_run_id": {
+            "type": "string",
+            "title": "Model Run Id",
+            "description": "MLflow run that trained the answering model"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "type": "array",
+            "title": "Recommendations",
+            "description": "Best match first"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "model_version",
+          "model_run_id",
+          "recommendations"
+        ],
+        "title": "RecommendResponse"
+      },
+      "Recommendation": {
+        "properties": {
+          "track_id": {
+            "type": "string",
+            "title": "Track Id",
+            "description": "Spotify track ID"
+          },
+          "track_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Name",
+            "description": "Title"
+          },
+          "artists": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artists",
+            "description": "Artists, separated by ';'"
+          },
+          "album_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album Name",
+            "description": "Album"
+          },
+          "genres": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Genres",
+            "description": "Every genre the track is listed under"
+          },
+          "popularity": {
+            "type": "integer",
+            "title": "Popularity",
+            "description": "Spotify popularity, 0-100"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank",
+            "description": "1 is the closest match"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Cosine similarity to the query, -1 to 1"
+          },
+          "why": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Why",
+            "description": "Traits shared with the query that add most to the score, strongest first"
+          },
+          "explored": {
+            "type": "boolean",
+            "title": "Explored",
+            "description": "A random pick in place of the lowest-ranked slot, to learn from",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "track_id",
+          "track_name",
+          "artists",
+          "album_name",
+          "genres",
+          "popularity",
+          "rank",
+          "score"
+        ],
+        "title": "Recommendation"
+      },
+      "RollbackRequest": {
+        "properties": {
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "Default: the `previous` alias"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RollbackRequest"
+      },
+      "RollbackResponse": {
+        "properties": {
+          "champion": {
+            "type": "integer",
+            "title": "Champion",
+            "description": "The version now served"
+          },
+          "previous": {
+            "type": "integer",
+            "title": "Previous",
+            "description": "The version it replaced (the next rollback's default)"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "What happens next, in words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "champion",
+          "previous",
+          "detail"
+        ],
+        "title": "RollbackResponse"
+      },
+      "SearchResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "description": "The text searched for"
+          },
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version",
+            "description": "The version whose catalogue was searched"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            },
+            "type": "array",
+            "title": "Tracks",
+            "description": "Title matches first, then artist matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "model_version",
+          "tracks"
+        ],
+        "title": "SearchResponse"
+      },
+      "Sliders": {
+        "properties": {
+          "danceability": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Danceability",
+            "description": "0 (not) to 1 (very)"
+          },
+          "energy": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy",
+            "description": "0 (calm) to 1 (intense)"
+          },
+          "loudness": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 5.0,
+                "minimum": -60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loudness",
+            "description": "Average loudness, dB"
+          },
+          "speechiness": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speechiness",
+            "description": "0 (music) to 1 (spoken word)"
+          },
+          "acousticness": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acousticness",
+            "description": "0 (electric) to 1 (acoustic)"
+          },
+          "instrumentalness": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrumentalness",
+            "description": "1: no vocals"
+          },
+          "liveness": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liveness",
+            "description": "1: recorded live"
+          },
+          "valence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valence",
+            "description": "0 (sad) to 1 (happy)"
+          },
+          "tempo": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 250.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tempo",
+            "description": "Beats per minute"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode",
+            "description": "0 minor, 1 major"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Sliders",
+        "description": "Audio features a listener can ask for directly, in the dataset's units. All optional."
+      },
+      "StageView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Stage name in dvc.yaml"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "ok, failed, running or not run: the stage's last result"
+          },
+          "command": {
+            "type": "string",
+            "title": "Command",
+            "description": "The stage's command"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Metrics",
+            "description": "Rows, seconds, rows per second, ..."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "command",
+          "metrics"
+        ],
+        "title": "StageView"
+      },
+      "Track": {
+        "properties": {
+          "track_id": {
+            "type": "string",
+            "title": "Track Id",
+            "description": "Spotify track ID"
+          },
+          "track_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Name",
+            "description": "Title"
+          },
+          "artists": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artists",
+            "description": "Artists, separated by ';'"
+          },
+          "album_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Album Name",
+            "description": "Album"
+          },
+          "genres": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Genres",
+            "description": "Every genre the track is listed under"
+          },
+          "popularity": {
+            "type": "integer",
+            "title": "Popularity",
+            "description": "Spotify popularity, 0-100"
+          }
+        },
+        "type": "object",
+        "required": [
+          "track_id",
+          "track_name",
+          "artists",
+          "album_name",
+          "genres",
+          "popularity"
+        ],
+        "title": "Track"
+      },
+      "TriggerRequest": {
+        "properties": {
+          "trigger": {
+            "type": "string",
+            "const": "manual",
+            "title": "Trigger",
+            "default": "manual"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TriggerRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

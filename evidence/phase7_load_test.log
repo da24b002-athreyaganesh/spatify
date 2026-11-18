@@ -1,0 +1,21 @@
+uv run python scripts/load_test.py
+Warm-up: 5 s at 1 client (not counted)
+1 clients for 30 s ...
+  1,461 requests, 48.7 req/s, p50 19.4 ms, p95 33.3 ms, p99 44.5 ms, 0 errors, versions {'8': 1461}
+10 clients for 30 s ...
+  2,941 requests, 98.0 req/s, p50 99.9 ms, p95 159.6 ms, p99 193.0 ms, 0 errors, versions {'8': 2941}
+40 clients for 30 s ...
+  3,320 requests, 110.7 req/s, p50 356.8 ms, p95 516.0 ms, p99 585.7 ms, 0 errors, versions {'8': 3320}
+
+ concurrency  requests   rps  p50_ms  p95_ms  p99_ms  errors  little_r_ms  meets_target
+           1      1461  48.7    19.4    33.3    44.5       0         20.5          True
+          10      2941  98.0    99.9   159.6   193.0       0        102.0          True
+          40      3320 110.7   356.8   516.0   585.7       0        361.4         False
+
+| clients | requests | req/s | p50 ms | p95 ms | p99 ms | errors | Little's R = N/X (ms) | p95 <= 300 ms, no errors |
+|---:|---:|---:|---:|---:|---:|---:|---:|:---:|
+| 1 | 1,461 | 48.7 | 19.4 | 33.3 | 44.5 | 0 | 20.5 | yes |
+| 10 | 2,941 | 98.0 | 99.9 | 159.6 | 193.0 | 0 | 102.0 | yes |
+| 40 | 3,320 | 110.7 | 356.8 | 516.0 | 585.7 | 0 | 361.4 | **no** |
+
+Wrote reports/load_test/load_test.json, load_test.md and load_test.png

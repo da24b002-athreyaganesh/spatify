@@ -75,6 +75,16 @@ select = ["E", "W", "F", "I", "N", "B", "UP"]
 # Dashboard specs: PromQL queries are kept on one line each, as they appear in Grafana.
 "monitoring/grafana/build_dashboards.py" = ["E501"]
 
+[tool.coverage.run]
+source = ["spatify"]
+branch = true            # count both sides of every if, not only lines
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.coverage.html]
+directory = "reports/coverage"   # git-ignored; the terminal summary goes to evidence/
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

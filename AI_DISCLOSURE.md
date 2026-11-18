@@ -26,6 +26,25 @@ Required by the DA3408 code of conduct on fair use of AI. Updated as the project
   - the simulator's load options, their tests and decision-log entries D40–D42.
 
   It generated every PromQL query and alert rule (each is marked in the files, as in A4), and reused A4's two node-exporter regexes. It added `prometheus-flask-exporter` to the lock file and pulled the Alertmanager image. It ran the tests, and promtool and amtool in throwaway containers. It ran a throwaway MLflow server to check `--expose-prometheus` and a throwaway Grafana to check the dashboards load. It checked the alerts table's SQL against my running Postgres inside a transaction it rolled back. It didn't build the images, start the monitoring services or restart the stack. When my run showed the frontend's target down, it read Prometheus's history to find the cause, and changed the frontend so its metrics server starts with the process instead of on the first page view. When a batch I dropped in again was ignored, it found and fixed the worker's check for new batches. It checked the simulator against the gateway app run in-process with test fakes, and the bad-model script against a throwaway MLflow registry outside the repo. After the drive was remounted under a new path, it reinstalled the project's virtual environment so its tools would run again. It didn't build the images, start the stack or run the pipeline.
+- Phase 7: Claude Code wrote:
+  - the whole-pipeline integration test and the test that no key reaches the logs;
+  - the load test (`scripts/load_test.py`, after the course's A5 pattern) and the failure test (`scripts/failure_test.py`);
+  - the `Makefile` with `make ci` and its pipeline script, and the coverage settings;
+  - `docs/security.md`, `docs/test_plan.md` and the `docs/test_report.md` template;
+  - decision-log entries D43–D44.
+
+  It ran the tests and a coverage run on my machine. It checked the load test against a mock gateway, and the failure test's kill command against throwaway local processes. That check showed the first version was too broad (it killed the shell running it), so it was narrowed to an exact match. It didn't run the load test, the failure test or `make ci` against the stack.
+- Phase 7 report (step 7.4): Claude Code finished `docs/test_report.md` from my evidence files and screenshots. Two defects showed up in my runs:
+  - The failure-run alert never fired. It found the cause in Prometheus's history and fixed it in the worker's metrics, with a test.
+  - The 5xx panel's axis read 0-10000%. It fixed the dashboard builder, and checked the running Grafana had picked the change up.
+
+  It recorded both in D41 and D42. It didn't run the load test, the failure test or the usability test.
+- Phase 8 (documents): Claude Code drafted:
+  - `docs/architecture.md`, `docs/hld.md`, `docs/lld.md` and `docs/user_manual.md`, and rewrote the README;
+  - `scripts/export_api_docs.py`, which writes `docs/openapi.json` and the LLD's API reference from the code, and `tests/test_docs.py`.
+
+  The HLD summarises the decisions in `docs/decision_log.md`; it adds no new design. To make the API specification complete, it added the error responses and field descriptions to the gateway's OpenAPI spec, and corrected the DVC remote's path in D7 and the in-app Help page's operator section. It ran the tests; it didn't run the stack.
+- Phase 8 (finishing the documents): Claude Code put my screenshots into the user manual, renaming one file to the name the manual uses, and fitted the captions to what each screenshot shows. It checked the documents against the code and updated what was out of date: the test report with my usability results and the failure-test rerun, the test counts, the data card. The screenshots showed two display bugs in the console (the pipeline diagram's labels and squeezed charts); it fixed them, with tests. It audited the repo against the rubric and the problem statement's deliverables. It ran the tests; it didn't rebuild the images or run the stack.
 
 What I did myself (check each line is true before submitting):
 

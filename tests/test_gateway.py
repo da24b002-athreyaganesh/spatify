@@ -7,6 +7,7 @@ real Compose stack in scripts/smoke_test.py.
 
 import hashlib
 import json
+import logging
 from collections import Counter
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -21,6 +22,7 @@ from prometheus_client import REGISTRY
 
 from spatify.gateway.app import create_app
 from spatify.gateway.feedback_drift import feedback_drift
+from spatify.gateway.logs import JsonFormatter
 from spatify.gateway.model_client import ModelClient
 from spatify.gateway.registry import Registry
 from spatify.gateway.settings import Settings
@@ -649,3 +651,32 @@ def test_the_rank_of_each_rated_track_is_summarised(gw):
     rated = {"request_id": shown["request_id"], "track_id": "t2", "action": "like"}
     assert gw.client.post("/feedback", json=rated).status_code == 201
     assert rank_sum() == before + 3  # t2 was third
+
+
+# --- Security: no secrets in logs (docs/security.md) ------------------------------------
+
+
+def test_the_admin_key_never_reaches_the_logs(gw):
+    """The key in a header or a Bearer token isn't logged, whether it's right or wrong."""
+    lines = []
+
+    class Collect(logging.Handler):
+        def emit(self, record):
+            lines.append(self.format(record))
+
+    handler = Collect(level=logging.DEBUG)
+    handler.setFormatter(JsonFormatter())  # exactly what the gateway writes
+    root, level = logging.getLogger(), logging.getLogger().level
+    root.addHandler(handler)
+    root.setLevel(logging.DEBUG)
+    try:
+        gw.client.post("/models/rollback", headers={"X-API-Key": KEY})
+        gw.client.post("/models/rollback", headers={"X-API-Key": KEY + "-wrong"})
+        gw.client.post("/pipeline/trigger", headers={"X-API-Key": KEY})
+        bearer = {"Authorization": f"Bearer {KEY}"}
+        gw.client.post("/alerts", json=alertmanager("firing"), headers=bearer)
+    finally:
+        root.removeHandler(handler)
+        root.setLevel(level)
+    assert len(lines) >= 4  # the requests were logged
+    assert not [line for line in lines if KEY in line]

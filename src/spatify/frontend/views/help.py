@@ -68,8 +68,11 @@ The **Operator console** shows:
 - **Models:** every registered model version, which one is serving (the *champion*), its
   like rate, and the data and code it came from. *Roll back* serves an earlier version again;
   listeners get it within about 15 seconds.
-- **Data drift:** how far new data has moved from the training data, and *Retrain now*.
-- **Tools:** links to MLflow, Grafana, Prometheus, the Ray Dashboard and the API docs.
+- **Data drift:** how far new data has moved from the training data, whether listeners are
+  liking fewer songs than before, and *Retrain now*.
+- **Monitoring:** alerts that are firing, their history, and live charts from Grafana.
+- **Tools:** links to MLflow, Grafana, Prometheus, Alertmanager, the Ray Dashboard and the
+  API docs.
 
 Rolling back and starting runs need the **admin key**: type it into the console's sidebar.
 It's `SPATIFY_API_KEY` in the project's `.env` file.

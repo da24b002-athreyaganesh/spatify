@@ -128,9 +128,11 @@ def timeseries(
     lines: list[tuple[float, str]] | None = None,
     step: bool = False,
     decimals: int | None = None,
+    soft_hi: float | None = None,
 ) -> dict:
     """A time series panel. `lines` draws dashed horizontal lines (alert thresholds);
-    `step` draws a value that jumps (a version number) as steps, not slopes."""
+    `step` draws a value that jumps (a version number) as steps, not slopes; `soft_hi` is
+    the axis top unless the data goes higher (so an all-zero line keeps a sensible axis)."""
     overrides, n = [], 0
     for q in queries:
         for name in q.series():
@@ -170,6 +172,8 @@ def timeseries(
         defaults["max"] = hi
     if decimals is not None:
         defaults["decimals"] = decimals
+    if soft_hi is not None:
+        defaults["custom"]["axisSoftMax"] = soft_hi
     return {
         "type": "timeseries",
         "id": panel_id,
@@ -484,6 +488,7 @@ def service() -> dict:
                 "requests answered 5xx",
                 (0, 14, 8, 8),
                 lines=[(0.05, VERMILLION)],
+                soft_hi=0.1,  # 0-10%, so the 5% line shows; it grows if errors pass 10%
             ),
             timeseries(
                 10,

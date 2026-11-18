@@ -1,0 +1,44 @@
+[
+  {
+    "concurrency": 1,
+    "requests": 1461,
+    "rps": 48.7,
+    "p50_ms": 19.4,
+    "p95_ms": 33.3,
+    "p99_ms": 44.5,
+    "errors": 0,
+    "versions": {
+      "8": 1461
+    },
+    "little_r_ms": 20.5,
+    "meets_target": true
+  },
+  {
+    "concurrency": 10,
+    "requests": 2941,
+    "rps": 98.0,
+    "p50_ms": 99.9,
+    "p95_ms": 159.6,
+    "p99_ms": 193.0,
+    "errors": 0,
+    "versions": {
+      "8": 2941
+    },
+    "little_r_ms": 102.0,
+    "meets_target": true
+  },
+  {
+    "concurrency": 40,
+    "requests": 3320,
+    "rps": 110.7,
+    "p50_ms": 356.8,
+    "p95_ms": 516.0,
+    "p99_ms": 585.7,
+    "errors": 0,
+    "versions": {
+      "8": 3320
+    },
+    "little_r_ms": 361.4,
+    "meets_target": false
+  }
+]

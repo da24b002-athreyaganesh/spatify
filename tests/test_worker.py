@@ -336,3 +336,13 @@ def test_stage_throughput_comes_from_the_stage_metrics_files(repo):
     worker.step()  # a run; afterwards the gauges are read again
     assert throughput("features") == 900.0
     assert REGISTRY.get_sample_value("spatify_pipeline_stage_rows", {"stage": "ingest"}) == 100
+
+
+def test_failed_runs_are_counted_from_zero_so_the_first_one_alerts():
+    """PipelineRunFailed uses increase(); a series that first appeared at 1 would hide the
+    first failure after a worker restart (found in step 7.2)."""
+    for trigger in ("manual", "new_data", "drift", "feedback"):
+        value = REGISTRY.get_sample_value(
+            "spatify_pipeline_runs_total", {"trigger": trigger, "status": "failed"}
+        )
+        assert value is not None  # exported before any run, so it can rise from 0

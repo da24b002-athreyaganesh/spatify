@@ -274,7 +274,23 @@ def test_dag_diagram_colours_stages_by_result():
     dot = ui.dag_dot(DAG)
     assert '"ingest" -> "train";' in dot and '"data/incoming" -> "ingest";' in dot
     assert ui.GREEN in dot and ui.VERMILLION in dot  # ok and failed
-    assert "20,000 rows/s" in dot
+    # Throughput on a second line: DOT's \\n, not an escaped backslash shown as "\\n".
+    assert 'label="ingest\\n20,000 rows/s"' in dot
+    assert "\\\\n" not in dot
+
+
+def test_charts_fit_the_width_and_keep_their_height():
+    """Streamlit's default "fit" squeezed the bars and clipped the titles (found in 8.3)."""
+    versions = [v | {"likes": 3, "skips": 1} for v in VERSIONS]
+    charts = [
+        ui.throughput_chart(DAG["stages"]),
+        ui.like_rate_chart(versions),
+        ui.drift_chart(DRIFT["batches"][1], DRIFT["thresholds"]),
+    ]
+    for chart in charts:
+        spec = chart.to_dict()
+        assert spec["autosize"] == {"type": "fit-x", "contains": "padding"}
+        assert spec["height"] >= 36  # the plotting area, not title and axes as well
 
 
 def test_titles_with_markdown_characters_show_as_written():

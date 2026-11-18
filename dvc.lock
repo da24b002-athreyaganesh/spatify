@@ -155,9 +155,9 @@ stages:
     deps:
     - path: data/validated
       hash: md5
-      md5: e40d8f04edd09e70858d596069e7cbc0.dir
-      size: 8685708
-      nfiles: 10
+      md5: 28bfc2cc89ef835be369b775b69dc1c8.dir
+      size: 11651141
+      nfiles: 14
     - path: src/spatify/pipeline/common.py
       hash: md5
       md5: de378cb9e228ef9e16f322ed453a2008
@@ -191,13 +191,13 @@ stages:
     outs:
     - path: data/features
       hash: md5
-      md5: a326b88a231951a64d1aa4548e9fe373.dir
-      size: 10070624
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
     - path: metrics/features.json
       hash: md5
-      md5: 073befdba6cb77f64f5154914b297d67
-      size: 141
+      md5: 46339827e56909267fd82cf9fdcbdd76
+      size: 142
   eda:
     cmd: python scripts/eda.py
     deps:
@@ -241,13 +241,13 @@ stages:
       size: 648
     - path: data/features
       hash: md5
-      md5: a326b88a231951a64d1aa4548e9fe373.dir
-      size: 10070624
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
     - path: data/feedback
       hash: md5
-      md5: fd1721a23a731246a13307ca6b9ddc8b.dir
-      size: 205794
+      md5: 692172b480f65c941f712ae970091491.dir
+      size: 206139
       nfiles: 1
     - path: python_env.yaml
       hash: md5
@@ -323,7 +323,7 @@ stages:
     outs:
     - path: models/candidates.json
       hash: md5
-      md5: 5846b1488751e65790a75473460c8554
+      md5: 2df33534b1940e8b8ad57a83056d2774
       size: 1684
   evaluate:
     cmd: mlflow run . -e evaluate --env-manager=local --experiment-name spatify
@@ -331,17 +331,17 @@ stages:
     deps:
     - path: data/features
       hash: md5
-      md5: a326b88a231951a64d1aa4548e9fe373.dir
-      size: 10070624
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
     - path: data/feedback
       hash: md5
-      md5: fd1721a23a731246a13307ca6b9ddc8b.dir
-      size: 205794
+      md5: 692172b480f65c941f712ae970091491.dir
+      size: 206139
       nfiles: 1
     - path: models/candidates.json
       hash: md5
-      md5: 5846b1488751e65790a75473460c8554
+      md5: 2df33534b1940e8b8ad57a83056d2774
       size: 1684
     - path: src/spatify/model/data.py
       hash: md5
@@ -379,41 +379,41 @@ stages:
     outs:
     - path: metrics/evaluate.json
       hash: md5
-      md5: 3f4e70656aceacc78df21742e1d5989e
-      size: 2872
+      md5: 755697ee425b520f2d9ec1882ba020e1
+      size: 2874
     - path: reports/evaluate/feedback.png
       hash: md5
-      md5: ed17e9eea70929213c2538a9e67b0abe
-      size: 54179
+      md5: 74582a7e642409e8fddf0ebb3270be0b
+      size: 54199
     - path: reports/evaluate/variants.csv
       hash: md5
-      md5: 6b3e78b982637b7838356c85e8e05141
-      size: 680
+      md5: 880a78c2247f3cf4eac1e64750394f41
+      size: 684
     - path: reports/evaluate/variants.png
       hash: md5
-      md5: ad664b0f0fee4a8745dbdd1d1103874a
-      size: 52680
+      md5: e5f45f2d496187c594c8065443292eaa
+      size: 53088
   register:
     cmd: mlflow run . -e register --env-manager=local --experiment-name spatify
       --run-name register
     deps:
     - path: data/features
       hash: md5
-      md5: a326b88a231951a64d1aa4548e9fe373.dir
-      size: 10070624
+      md5: a1fb7c7a2dc490f399c1ed95d1b89dee.dir
+      size: 9765844
       nfiles: 6
     - path: data/feedback
       hash: md5
-      md5: fd1721a23a731246a13307ca6b9ddc8b.dir
-      size: 205794
+      md5: 692172b480f65c941f712ae970091491.dir
+      size: 206139
       nfiles: 1
     - path: metrics/evaluate.json
       hash: md5
-      md5: 3f4e70656aceacc78df21742e1d5989e
-      size: 2872
+      md5: 755697ee425b520f2d9ec1882ba020e1
+      size: 2874
     - path: models/candidates.json
       hash: md5
-      md5: 5846b1488751e65790a75473460c8554
+      md5: 2df33534b1940e8b8ad57a83056d2774
       size: 1684
     - path: src/spatify/model/data.py
       hash: md5
@@ -455,8 +455,8 @@ stages:
     outs:
     - path: metrics/register.json
       hash: md5
-      md5: 5fc522df4c3914106b452b35649b9d0f
-      size: 294
+      md5: 6f2a1e22340b2ce68e7937994e3713c9
+      size: 295
   drift_check:
     cmd: python -m spatify.pipeline.drift
     deps:

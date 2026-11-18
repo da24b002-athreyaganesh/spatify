@@ -29,8 +29,8 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Why:** datasets, models and pipeline outputs change with the pipeline, so DVC versions them alongside `dvc.lock`. PDFs, screenshots and the demo video belong to the Git history, so they go in LFS (the L2 rule of thumb: large files that compress badly).
 - **Guard:** a pre-commit hook rejects any other file over 500 KB.
 
-## D7. A local folder as the DVC remote (`~/dvc-storage/spatify`)
-- **Why:** cloud platforms are not allowed, and L2 uses a local remote.
+## D7. A local folder as the DVC remote (`Project/dvc-storage`, next to the repo)
+- **Why:** cloud platforms are not allowed, and L2 uses a local remote. `.dvc/config` names it by a relative path (`../../dvc-storage`), so a clone placed next to the repo, as in the reproducibility drill, finds it too.
 - **Trade-off:** nobody else can `dvc pull` from it; D5 and the reproducible `make_batches` stage cover that.
 
 ## D8. Batch generator design
@@ -188,6 +188,9 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Metrics:** prometheus_client serves `/metrics` on its own port, 9101, as in A4, using A4's guard against Streamlit re-importing modules. They count page views, gateway calls by endpoint and outcome, gateway latency as the user sees it, like and skip clicks, and the error messages shown.
 - **Charts:** they follow A4's "7 Commandments": a title, a one-line description, axes named with units and scale, a legend whenever colour means something, and the Okabe-Ito palette.
 - **Tests:** Streamlit's AppTest runs every page headlessly against a fake gateway and checks both what the page shows and what it sends (`tests/test_frontend.py`).
+- **Fixed in step 8.3** (the user manual's screenshots showed both):
+  - The charts declare `fit-x` sizing. Streamlit's default "fit" squeezed the bars into a few pixels and clipped the titles.
+  - The pipeline diagram's second line (rows per second) is a real line break, not a literal `\n`.
 
 ## D33. "Why" labels: each feature's exact share of the score
 - **How:** the score is a cosine similarity, a sum over features of (query × track), both as weighted z-scores of length 1. So each feature's product is its exact share of the score. The labels name the features with the largest positive shares, at most three and at least 5% of the score each. Those are the features where the query and the track are both well above, or both well below, the average track ("energetic", "acoustic", "minor key"). A slider-only query is explained only by the sliders set, since unset features sit at the mean and contribute nothing.
@@ -345,6 +348,7 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Delivery:** Alertmanager groups alerts by name and posts firing and resolved alerts to the gateway's `POST /alerts`. The gateway stores them in Postgres, and the console's Monitoring tab shows the firing ones first.
   - **Why the gateway:** the lecture's sample posts to webhook.site, an outside service. A local receiver keeps alerts on the laptop and puts them where operators already look.
   - **Authentication:** the endpoint wants the admin key as a Bearer token. Alertmanager's container writes it from `.env` to a file only it can read, so no secret is in the committed config.
+- **Counters are exported from zero** (found in step 7.2): `PipelineRunFailed` reads `increase()` of a labelled counter. A labelled series only appears with its first increment, already at 1, so the first failed run after a worker restart showed no increase and the alert stayed silent. The worker now exports every trigger and result at 0 when it starts.
 - **Alerts don't act:**
   - The worker already retrains on drift by itself (D36), so a `DataDrift` webhook that queued a retrain would start the same retrain twice.
   - `FeedbackDrift` is for an operator to judge (D37, D39).
@@ -359,6 +363,7 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Generated, not hand-edited:**
   - `monitoring/grafana/build_dashboards.py` builds all 56 panels with the same helpers, so A4's 7 commandments hold everywhere. Okabe-Ito colours; series in a panel differ by line style too; named axes that say "linear"; a unit on every panel; a legend whenever there's more than one series; a title and a one-paragraph description on every panel.
   - `tests/test_monitoring.py` checks all of this. It also checks that the JSON matches the builder, that every query names a metric something exports (a typo can't leave an empty panel), and that promtool parses every query.
+- **A soft axis maximum for shares that are usually zero** (found in step 7.2): with no errors, Grafana gave the 5xx-share panel a 0-10000% axis, its default 0-100 range shown as a percentage. The axis now tops out at 10% unless the data goes higher.
 - **Series that come and go** (model versions, pipeline triggers) are shown as labelled bars, not lines. Colours fixed by name can't follow versions that don't exist yet, and Grafana's own palette isn't colour-blind safe.
 - **AI attribution, as in A4:** every query starts with a `# AI-generated PromQL` comment line saying what it computes, and so does every rule in the rule files.
 - **Viewing:**
@@ -366,3 +371,45 @@ One entry per design decision: what was chosen, why, and what else was considere
   - The console's Monitoring tab embeds six panels as iframes (`ui.GRAFANA_PANELS`; a test checks they exist), so an operator sees alerts and live charts without leaving the console. This is the rubric's "orchestrating the visualisation from multiple tools".
   - Ports are on localhost only, as for every other service.
 - **Considered:** building the dashboards by hand in the Grafana UI and exporting them, as in A4. With 56 panels, keeping the colours, styles and descriptions consistent by hand would be slow, and nothing would catch a mistyped metric.
+
+## D43. Testing: seven levels, one `make ci`, and acceptance criteria from the problem statement
+- **Levels** (`docs/test_plan.md`):
+  - **Unit and component:** every module against fakes.
+  - **Integration:** the Ray stages, and the whole pipeline into a throwaway MLflow registry.
+  - **System:** the running stack, through its public interfaces.
+  - **Performance:** the load test.
+  - **Reliability:** the failure test.
+  - **Usability:** first-time users.
+  - **Code quality and security.**
+
+  The first two levels run on every change in about a minute. The others need the stack and leave evidence files.
+- **The whole-pipeline test** (`tests/test_full_pipeline.py`) runs every stage's code in `dvc repro` order on 1,300 generated tracks. It checks a gate both ways: the first model is promoted and answers queries, and an equally good second one isn't. It calls the stages directly, not through DVC and `mlflow run`, so it needs neither a repo nor a server and takes about 15 seconds. `make ci` runs the real `dvc repro`.
+- **Load test** (`scripts/load_test.py`): the course's closed-loop pattern (A5 / the KServe lab), 30 s at each of 1, 10 and 40 clients after a warm-up.
+  - **Requests:** realistic listener queries with no feedback, so it can't trigger a retrain.
+  - **Reported:** p50/p95/p99, throughput, errors, the versions that answered, and Little's law (R = N/X) as a check on the measurements.
+  - **The plot** follows A4's 7 commandments.
+- **Failure test** (`scripts/failure_test.py`):
+  - **What it does:** queues a retrain through the API and SIGKILLs the train stage inside the worker, as an out-of-memory kill would, while a listener asks for recommendations five times a second.
+  - **What passes:** the run is failed, its train stage failed, the champion is unchanged, and every recommendation was answered by it.
+  - **What it kills:** only processes started as `python -m spatify.model.<stage>`, an exact argument match. A first version matched any command line mentioning the module, and killed the shell that ran its own check.
+- **`make ci`:** ruff, then pytest, then `dvc repro` against the stack's MLflow, then the promotion gate's decision.
+  - **The worker is stopped** for the pipeline step and started again: two DVC processes can't share a repo (D36), and a stop waits for any run in progress.
+  - **Not promoting doesn't fail CI:** it's a normal outcome (D22).
+  - **No GitHub Actions:** the rubric grades CI through DVC, and cloud platforms are disallowed.
+- **Coverage:** 84% of `src/spatify` (lines and branches). The criterion is ≥ 80%.
+  - **The two Postgres stores** are tested through fakes. Their SQL was checked against the real database in rolled-back transactions, and the stack tests run it.
+  - **The worker's and frontend's start-up modules** only run in their containers.
+- **Acceptance criteria** come from the problem statement: FR1-FR6, and the performance, reliability, reproducibility, observability, portability, usability and maintainability requirements, plus the guidelines' security and the evaluation plan's rollback. Each one names the test cases and evidence that decide it.
+
+## D44. Security: hashed keys, no secrets in logs, localhost only
+- **What it covers** (`docs/security.md`):
+  - **The admin key** is random, kept in a `0600`, git-ignored `.env`. The gateway holds only its SHA-256 and compares in constant time.
+  - **Admin actions need the key:** rollback, triggering a run, and Alertmanager's webhook (as a Bearer token).
+  - **No secrets in logs:** the gateway logs a fixed list of fields, never headers or bodies. A test sends the key every way and checks no log line contains it.
+  - **Input:** validated before it reaches the model, and SQL is always parameterised.
+  - **Containers:** non-root processes, hard memory limits, every port on `127.0.0.1`.
+- **Encryption (the guidelines' word):**
+  - Used where it does something: the admin key is stored only as a hash.
+  - Not added for traffic that never leaves the laptop (the Compose network and loopback), nor for public data and simulated feedback at rest.
+  - The note lists what would change first if Spatify left the laptop: TLS, disk encryption, a secrets manager, user accounts.
+- **Considered:** self-signed TLS on the gateway now. Every service and the browser would need to trust the certificate, for traffic no other machine can see.

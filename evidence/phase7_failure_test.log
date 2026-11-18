@@ -1,0 +1,13 @@
+uv run python scripts/failure_test.py
+Failure test: kill the train stage mid-run; the champion must keep serving.
+[   0.0 s] Champion before: version 8
+[   0.1 s] Queued run 248 (a manual retrain); the worker checks every 15 s
+[  20.6 s] Killed the train stage (pid 436)
+[  24.6 s] Run 248 finished: failed. Training saw 6,455 likes and skips. Retraining failed at train; the champion keeps serving.
+[  24.6 s] Champion after: version 8
+[  24.6 s] Listener: 110 requests, 0 failed, answered by {8: 110}
+  PASS  the run is recorded as failed
+  PASS  its train stage is the one marked failed
+  PASS  the champion is the same version
+  PASS  every recommendation was answered, by the champion
+Result: PASS (4 of 4 checks)
