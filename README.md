@@ -13,7 +13,7 @@ Spatify recommends songs that sound like a song you pick, or like the sliders yo
 
 All of it runs as 11 Docker Compose services on one laptop.
 
-**Demo video (3 minutes):** [watch it on Google Drive](https://drive.google.com/PASTE_THE_SHARE_LINK_HERE)
+**Demo video (3 minutes):** [watch it on Google Drive](https://drive.google.com/file/d/1EpO4eITYwcobTjH6PgOn1n3JfLtdlgaw/view?usp=sharing)
 
 > **Most of the feedback is simulated.** Real listeners are few, so most likes and skips come from a documented user simulator (`scripts/simulate_users.py`, D38): simulated listeners with a hidden taste the system has to learn. The feedback-learning results show that the loop works, not what real listeners would gain.
 
