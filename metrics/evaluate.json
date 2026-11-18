@@ -1,110 +1,110 @@
 {
   "k": 10,
   "queries": 2000,
-  "random_baseline": 0.0154,
-  "best_variant": "all-fisher",
+  "random_baseline": 0.0123,
+  "best_variant": "all-feedback",
   "best": {
-    "genre_match_at_k": 0.1348,
-    "genre_match_at_1": 0.1775,
-    "mean_score_at_k": 0.9583,
-    "coverage_at_k": 0.2595,
-    "ms_per_query": 0.403,
-    "feedback_hit_rate": 0.9167,
-    "feedback_ndcg": 0.5869
+    "genre_match_at_k": 0.1096,
+    "genre_match_at_1": 0.1475,
+    "mean_score_at_k": 0.9804,
+    "coverage_at_k": 0.2543,
+    "ms_per_query": 0.414,
+    "feedback_hit_rate": 0.8824,
+    "feedback_ndcg": 0.5891
   },
   "variants": {
-    "all-fisher": {
-      "genre_match_at_k": 0.1348,
-      "genre_match_at_1": 0.1775,
-      "mean_score_at_k": 0.9583,
-      "coverage_at_k": 0.2595,
-      "ms_per_query": 0.403,
-      "feedback_hit_rate": 0.9167,
-      "feedback_ndcg": 0.5869
-    },
     "no_tonal-uniform": {
-      "genre_match_at_k": 0.1347,
-      "genre_match_at_1": 0.172,
-      "mean_score_at_k": 0.968,
-      "coverage_at_k": 0.2611,
-      "ms_per_query": 0.39,
-      "feedback_hit_rate": 0.875,
-      "feedback_ndcg": 0.5553
+      "genre_match_at_k": 0.1293,
+      "genre_match_at_1": 0.171,
+      "mean_score_at_k": 0.969,
+      "coverage_at_k": 0.253,
+      "ms_per_query": 0.434,
+      "feedback_hit_rate": 0.8571,
+      "feedback_ndcg": 0.5385
+    },
+    "all-fisher": {
+      "genre_match_at_k": 0.1266,
+      "genre_match_at_1": 0.164,
+      "mean_score_at_k": 0.9585,
+      "coverage_at_k": 0.2531,
+      "ms_per_query": 0.451,
+      "feedback_hit_rate": 0.8571,
+      "feedback_ndcg": 0.4938
     },
     "no_tonal-fisher": {
-      "genre_match_at_k": 0.1319,
-      "genre_match_at_1": 0.181,
-      "mean_score_at_k": 0.9718,
-      "coverage_at_k": 0.2611,
-      "ms_per_query": 0.371,
-      "feedback_hit_rate": 0.875,
-      "feedback_ndcg": 0.5826
+      "genre_match_at_k": 0.1257,
+      "genre_match_at_1": 0.157,
+      "mean_score_at_k": 0.9722,
+      "coverage_at_k": 0.2533,
+      "ms_per_query": 0.469,
+      "feedback_hit_rate": 0.8908,
+      "feedback_ndcg": 0.5438
     },
     "all-uniform": {
-      "genre_match_at_k": 0.1282,
-      "genre_match_at_1": 0.169,
-      "mean_score_at_k": 0.9471,
-      "coverage_at_k": 0.2616,
-      "ms_per_query": 0.437,
-      "feedback_hit_rate": 0.8194,
-      "feedback_ndcg": 0.483
+      "genre_match_at_k": 0.1174,
+      "genre_match_at_1": 0.163,
+      "mean_score_at_k": 0.9488,
+      "coverage_at_k": 0.2531,
+      "ms_per_query": 0.43,
+      "feedback_hit_rate": 0.7983,
+      "feedback_ndcg": 0.447
     },
     "no_loudness-fisher": {
-      "genre_match_at_k": 0.1233,
-      "genre_match_at_1": 0.148,
-      "mean_score_at_k": 0.9654,
-      "coverage_at_k": 0.2606,
-      "ms_per_query": 0.383,
-      "feedback_hit_rate": 0.9028,
-      "feedback_ndcg": 0.5424
+      "genre_match_at_k": 0.1171,
+      "genre_match_at_1": 0.139,
+      "mean_score_at_k": 0.9656,
+      "coverage_at_k": 0.2547,
+      "ms_per_query": 0.46,
+      "feedback_hit_rate": 0.7983,
+      "feedback_ndcg": 0.4817
     },
     "no_loudness-uniform": {
-      "genre_match_at_k": 0.1182,
-      "genre_match_at_1": 0.1505,
-      "mean_score_at_k": 0.9545,
-      "coverage_at_k": 0.262,
-      "ms_per_query": 0.384,
-      "feedback_hit_rate": 0.8056,
-      "feedback_ndcg": 0.4843
+      "genre_match_at_k": 0.1109,
+      "genre_match_at_1": 0.145,
+      "mean_score_at_k": 0.9559,
+      "coverage_at_k": 0.2549,
+      "ms_per_query": 0.393,
+      "feedback_hit_rate": 0.7983,
+      "feedback_ndcg": 0.4368
     },
     "all-feedback": {
-      "genre_match_at_k": 0.1139,
-      "genre_match_at_1": 0.1365,
-      "mean_score_at_k": 0.978,
-      "coverage_at_k": 0.2633,
-      "ms_per_query": 0.426,
-      "feedback_hit_rate": 0.8194,
-      "feedback_ndcg": 0.577
+      "genre_match_at_k": 0.1096,
+      "genre_match_at_1": 0.1475,
+      "mean_score_at_k": 0.9804,
+      "coverage_at_k": 0.2543,
+      "ms_per_query": 0.414,
+      "feedback_hit_rate": 0.8824,
+      "feedback_ndcg": 0.5891
     }
   },
   "feedback": {
     "k": 3,
-    "test_lists": 72,
+    "test_lists": 119,
     "random": {
-      "hit_rate": 0.7972,
-      "ndcg": 0.4541
+      "hit_rate": 0.8067,
+      "ndcg": 0.4639
     },
     "promotion_metric": "feedback_ndcg"
   },
   "comparison": {
     "cold_start": {
-      "genre_match_at_k": 0.1348,
-      "genre_match_at_1": 0.1775,
-      "mean_score_at_k": 0.9583,
-      "coverage_at_k": 0.2595,
-      "ms_per_query": 0.403,
-      "feedback_hit_rate": 0.9167,
-      "feedback_ndcg": 0.5869
+      "genre_match_at_k": 0.1257,
+      "genre_match_at_1": 0.157,
+      "mean_score_at_k": 0.9722,
+      "coverage_at_k": 0.2533,
+      "ms_per_query": 0.469,
+      "feedback_hit_rate": 0.8908,
+      "feedback_ndcg": 0.5438
     },
-    "cold_start_variant": "all-fisher",
+    "cold_start_variant": "no_tonal-fisher",
     "feedback": {
-      "genre_match_at_k": 0.1139,
-      "genre_match_at_1": 0.1365,
-      "mean_score_at_k": 0.978,
-      "coverage_at_k": 0.2633,
-      "ms_per_query": 0.426,
-      "feedback_hit_rate": 0.8194,
-      "feedback_ndcg": 0.577
+      "genre_match_at_k": 0.1096,
+      "genre_match_at_1": 0.1475,
+      "mean_score_at_k": 0.9804,
+      "coverage_at_k": 0.2543,
+      "ms_per_query": 0.414,
+      "feedback_hit_rate": 0.8824,
+      "feedback_ndcg": 0.5891
     }
   }
 }

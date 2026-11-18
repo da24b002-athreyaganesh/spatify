@@ -1,6 +1,6 @@
 """The worker's Prometheus metrics (on METRICS_PORT, 9102): pipeline runs and data drift.
 
-Drift scores as metrics are the problem statement's FR4; Phase 6 alerts on them.
+Drift scores as metrics are the problem statement's FR4; Prometheus alerts on them (D41).
 """
 
 from __future__ import annotations
@@ -43,4 +43,12 @@ RETRAIN_TO_REDEPLOY = Histogram(
     "spatify_retrain_to_redeploy_seconds",
     "From a retraining run's start to the model server answering with the promoted model",
     buckets=(30, 45, 60, 90, 120, 180, 240, 300, 600),
+)
+STAGE_ROWS_PER_SECOND = Gauge(
+    "spatify_pipeline_stage_rows_per_second",
+    "Throughput of each data stage's last run, from metrics/<stage>.json (D40)",
+    ["stage"],
+)
+STAGE_ROWS = Gauge(
+    "spatify_pipeline_stage_rows", "Rows read by each data stage's last run", ["stage"]
 )

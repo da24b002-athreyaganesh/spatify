@@ -1,5 +1,6 @@
 """Operator console: the pipeline and its runs, the model versions with rollback, data
-drift, and links to every tool, so an operator reaches all of it from one place.
+drift, alerts and live Grafana panels, and links to every tool, so an operator reaches all
+of it from one place.
 
 Admin actions (rollback, starting a run) need the admin key, typed into the sidebar. It
 stays in this browser session; the frontend's container never holds it (D32).
@@ -286,6 +287,53 @@ def feedback_drift(report: dict) -> None:
     )
 
 
+def monitoring_tab() -> None:
+    """Firing alerts and their history (D41), and live panels from Grafana (D42)."""
+    try:
+        alerts = api.alerts()
+    except api.GatewayError as err:
+        ui.show_error(err, "alerts")
+        alerts = None
+    if alerts is not None:
+        firing = [a for a in alerts if a["status"] == "firing"]
+        for a in firing:
+            show = st.error if a["severity"] == "critical" else st.warning
+            show(
+                f"**{ui.md(a['summary'] or a['alertname'])}**  \n{ui.md(a['description'])}",
+                icon=":material/notifications_active:",
+            )
+        if not firing:
+            st.success("No alerts are firing.", icon=":material/check_circle:")
+        if alerts:
+            with st.expander(f"Alert history ({len(alerts)})"):
+                table = pd.DataFrame(alerts)[
+                    ["alertname", "status", "severity", "starts_at", "ends_at", "summary"]
+                ]
+                st.dataframe(table, hide_index=True, width="stretch")
+        st.caption(
+            "Prometheus checks its alert rules every 5 seconds and Alertmanager sends each "
+            "alert here when it starts and when it ends. The rules are listed under Tools → "
+            "Prometheus alerts."
+        )
+
+    st.subheader(
+        "Live from Grafana",
+        help="The last 30 minutes, refreshed every 10 seconds. Open Tools → Grafana for the "
+        "four full dashboards.",
+    )
+    for pair in range(0, len(ui.GRAFANA_PANELS), 2):
+        for column, (title, uid, panel_id) in zip(
+            st.columns(2), ui.GRAFANA_PANELS[pair : pair + 2], strict=False
+        ):
+            with column:
+                st.caption(title)
+                st.iframe(ui.grafana_panel(uid, panel_id), height=260)
+    st.caption(
+        "Blank panels mean Grafana isn't running yet: `docker compose up -d grafana`. "
+        "They show the data Prometheus has collected, so they fill in as Spatify is used."
+    )
+
+
 def tools_tab() -> None:
     st.write("Every tool behind Spatify, one click away (each opens in a new tab):")
     for name, url, what in ui.LINKS:
@@ -293,8 +341,8 @@ def tools_tab() -> None:
         link.link_button(name, url, icon=":material/open_in_new:", width="stretch")
         text.write(what)
     st.caption(
-        "Grafana and Prometheus open once monitoring is running, and the Ray Dashboard "
-        "only while a Ray cluster is running."
+        "The Ray Dashboard opens only while a Ray cluster is running on this laptop "
+        "(`ray start --head`); the pipeline's own Ray instances run inside the worker."
     )
 
 
@@ -328,12 +376,16 @@ if health["status"] != "ok":
     )
 show_notice()
 
-pipeline, models, drift, tools = st.tabs(["Pipeline", "Models", "Data drift", "Tools"])
+pipeline, models, drift, monitoring, tools = st.tabs(
+    ["Pipeline", "Models", "Data drift", "Monitoring", "Tools"]
+)
 with pipeline:
     pipeline_tab()
 with models:
     models_tab()
 with drift:
     drift_tab()
+with monitoring:
+    monitoring_tab()
 with tools:
     tools_tab()

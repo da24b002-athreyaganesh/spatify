@@ -1,0 +1,33 @@
+# Alertmanager (L9): groups the alerts Prometheus sends and posts them, firing and
+# resolved, to the gateway's /alerts, which stores them for the operator console (D41).
+# A local webhook only: the lecture's sample posts to webhook.site, an outside service.
+#
+# The gateway wants the admin key as a Bearer token. The Compose service writes
+# SPATIFY_API_KEY from .env to /tmp/webhook_token at start-up, so no secret is in this file.
+#
+# Validate after editing (tests/test_monitoring.py runs the same check):
+#   docker run --rm -v "$PWD/monitoring/alertmanager:/etc/alertmanager:ro" \
+#     --entrypoint amtool prom/alertmanager:v0.28.1 check-config /etc/alertmanager/alertmanager.yml
+
+route:
+  receiver: gateway
+  group_by: [alertname]
+  group_wait: 10s        # wait this long for related alerts before the first notice
+  group_interval: 1m     # then send changes to a group at most this often
+  repeat_interval: 4h    # and re-send a still-firing alert this often
+
+receivers:
+  - name: gateway
+    webhook_configs:
+      - url: http://gateway:8000/alerts
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /tmp/webhook_token
+
+# A critical alert on a service hides the warnings it causes on the same job.
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [job]

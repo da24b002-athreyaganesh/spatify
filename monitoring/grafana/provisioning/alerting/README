@@ -1,0 +1,2 @@
+# Grafana-managed alerting is not used: alerts are Prometheus rules (monitoring/prometheus/rules).
+# This folder exists so Grafana starts without an error about it.

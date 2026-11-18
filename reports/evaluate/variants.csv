@@ -1,8 +1,8 @@
 variant,feature_set,weighting,genre_match_at_k,genre_match_at_1,mean_score_at_k,coverage_at_k,ms_per_query,feedback_hit_rate,feedback_ndcg
-all-fisher,all,fisher,0.1348,0.1775,0.9583,0.2595,0.403,0.9167,0.5869
-no_tonal-uniform,no_tonal,uniform,0.1347,0.172,0.968,0.2611,0.39,0.875,0.5553
-no_tonal-fisher,no_tonal,fisher,0.1319,0.181,0.9718,0.2611,0.371,0.875,0.5826
-all-uniform,all,uniform,0.1282,0.169,0.9471,0.2616,0.437,0.8194,0.483
-no_loudness-fisher,no_loudness,fisher,0.1233,0.148,0.9654,0.2606,0.383,0.9028,0.5424
-no_loudness-uniform,no_loudness,uniform,0.1182,0.1505,0.9545,0.262,0.384,0.8056,0.4843
-all-feedback,all,feedback,0.1139,0.1365,0.978,0.2633,0.426,0.8194,0.577
+no_tonal-uniform,no_tonal,uniform,0.1293,0.171,0.969,0.253,0.434,0.8571,0.5385
+all-fisher,all,fisher,0.1266,0.164,0.9585,0.2531,0.451,0.8571,0.4938
+no_tonal-fisher,no_tonal,fisher,0.1257,0.157,0.9722,0.2533,0.469,0.8908,0.5438
+all-uniform,all,uniform,0.1174,0.163,0.9488,0.2531,0.43,0.7983,0.447
+no_loudness-fisher,no_loudness,fisher,0.1171,0.139,0.9656,0.2547,0.46,0.7983,0.4817
+no_loudness-uniform,no_loudness,uniform,0.1109,0.145,0.9559,0.2549,0.393,0.7983,0.4368
+all-feedback,all,feedback,0.1096,0.1475,0.9804,0.2543,0.414,0.8824,0.5891

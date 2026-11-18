@@ -46,6 +46,7 @@ log = logging.getLogger("spatify.worker")
 
 INCOMING = Path("data/incoming")
 QUARANTINE = Path("data/quarantine")
+DATA_STAGES = ("ingest", "validate", "features")  # their metrics files hold rows and rows/s
 FEEDBACK = Path("data/feedback")
 SNAPSHOT = FEEDBACK / "feedback.parquet"
 SNAPSHOT_TYPES = {
@@ -81,6 +82,7 @@ class Worker:
         self.env = dict(os.environ if env is None else env)
         self.served = served or self.wait_until_served
         self.last_failed = False  # the main loop waits a full poll after a failed run
+        self.record_throughput()  # the dashboards show the last numbers from the start
 
     def step(self) -> bool:
         """One check. True if it ran the pipeline."""
@@ -145,13 +147,15 @@ class Worker:
         return None
 
     def incoming_changes(self) -> Changes:
-        """Batch files that are new, changed or still waiting, and ones that were removed."""
+        """Batch files that are new, changed, still waiting or back after being removed,
+        and ones that were removed."""
         known = self.store.batches()
         files = {p.name: sha256(p) for p in sorted((self.repo / INCOMING).glob("*.csv"))}
         changes = Changes()
         for name, digest in files.items():
             row = known.get(name)
-            if row is None or row["sha256"] != digest or row["status"] == "new":
+            # "removed": dropped in again with the same contents, so it's new data again.
+            if row is None or row["sha256"] != digest or row["status"] in ("new", "removed"):
                 changes.new[name] = digest
         changes.removed = [
             name for name, row in known.items()
@@ -237,7 +241,16 @@ class Worker:
             metrics.RUN_SECONDS.labels(trigger).observe(seconds)
             metrics.LAST_RUN_OK.set(1 if status == "succeeded" else 0)
             metrics.LAST_RUN_TIME.set(time.time())
+            self.record_throughput()
             log.info("Run %s (%s) %s in %.0f s. %s", run_id, trigger, status, seconds, message)
+
+    def record_throughput(self) -> None:
+        """Each data stage's rows and rows per second, from its DVC metrics file (D40)."""
+        for stage in DATA_STAGES:
+            report = self.read_json(f"metrics/{stage}.json") or {}
+            if "rows_per_s" in report:
+                metrics.STAGE_ROWS_PER_SECOND.labels(stage).set(report["rows_per_s"])
+                metrics.STAGE_ROWS.labels(stage).set(report.get("rows", 0))
 
     def record_redeploy(self, result: dict, stages: dict, start: float) -> str:
         """Wait for the new champion to answer; record retrain-to-redeploy time (D37)."""

@@ -40,6 +40,8 @@ frontend = [
 ]
 mlflow-server = [
     "mlflow==3.17.1",
+    "prometheus-client>=0.26.0",
+    "prometheus-flask-exporter>=0.23.2",
     "psycopg[binary]>=3.3.6",
 ]
 worker = [
@@ -68,6 +70,10 @@ target-version = "py312"
 [tool.ruff.lint]
 # pycodestyle, pyflakes, import order, naming, bugbear, pyupgrade
 select = ["E", "W", "F", "I", "N", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Dashboard specs: PromQL queries are kept on one line each, as they appear in Grafana.
+"monitoring/grafana/build_dashboards.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

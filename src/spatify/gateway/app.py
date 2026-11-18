@@ -3,9 +3,10 @@
 Listener endpoints:  POST /recommend, POST /feedback, GET /tracks/search
 Operator endpoints:  GET /models, POST /models/rollback*, GET /pipeline/status,
                      GET /pipeline/runs, GET /pipeline/dag, POST /pipeline/trigger*,
-                     GET /drift
-Service endpoints:   GET /health (503 until Postgres and the model server answer), GET /metrics
-* needs the admin key in the X-API-Key header.
+                     GET /drift, GET /alerts
+Service endpoints:   GET /health (503 until Postgres and the model server answer), GET /metrics,
+                     POST /alerts** (Alertmanager's webhook, D41)
+* needs the admin key in the X-API-Key header; ** as a Bearer token.
 
 The frontend reaches the model, the registry and the database only through these
 endpoints (the rubric's "frontend and backend connected only through REST").
@@ -36,10 +37,12 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from spatify.gateway.feedback_drift import feedback_drift
 from spatify.gateway.logs import setup_logging
 from spatify.gateway.metrics import (
+    ALERTS,
     CHAMPION,
     EXPLORED,
     FEEDBACK,
     FEEDBACK_DRIFT,
+    FEEDBACK_RANK,
     IN_PROGRESS,
     LIKE_RATE,
     MODEL_UP,
@@ -55,6 +58,8 @@ from spatify.gateway.model_client import (
 from spatify.gateway.pipeline_view import PipelineUnavailableError, drift_view, load_dag
 from spatify.gateway.registry import Registry, RegistryError
 from spatify.gateway.schemas import (
+    AlertmanagerWebhook,
+    AlertRecord,
     DriftReport,
     FeedbackRequest,
     FeedbackResponse,
@@ -161,13 +166,23 @@ def create_app(
         lifespan=lifespan,
     )
 
-    def require_api_key(x_api_key: str | None = Header(None)) -> None:
-        """Admin actions need the key whose SHA-256 is in API_KEY_SHA256."""
+    def key_ok(key: str | None) -> bool:
+        """True for the key whose SHA-256 is in API_KEY_SHA256 (D28)."""
         if not settings.api_key_sha256:
             raise HTTPException(503, "Admin actions are disabled: API_KEY_SHA256 is not set")
-        given = hashlib.sha256((x_api_key or "").encode()).hexdigest()
-        if x_api_key is None or not hmac.compare_digest(given, settings.api_key_sha256):
+        given = hashlib.sha256((key or "").encode()).hexdigest()
+        return key is not None and hmac.compare_digest(given, settings.api_key_sha256)
+
+    def require_api_key(x_api_key: str | None = Header(None)) -> None:
+        """Admin actions need the key in the X-API-Key header."""
+        if not key_ok(x_api_key):
             raise HTTPException(401, "Missing or wrong X-API-Key header")
+
+    def require_bearer_key(authorization: str | None = Header(None)) -> None:
+        """Alertmanager sends the same key as `Authorization: Bearer <key>` (D41)."""
+        scheme, _, key = (authorization or "").partition(" ")
+        if scheme.lower() != "bearer" or not key_ok(key.strip() or None):
+            raise HTTPException(401, "Missing or wrong Bearer token")
 
     @app.middleware("http")
     async def observe(request: Request, call_next):
@@ -312,6 +327,7 @@ def create_app(
             shown["model_run_id"],
         )
         FEEDBACK.labels(body.action, str(shown["model_version"])).inc()
+        FEEDBACK_RANK.labels(body.action, str(shown["model_version"])).observe(rank)
         return FeedbackResponse(model_version=shown["model_version"])
 
     @app.get("/tracks/search", response_model=SearchResponse, tags=["listener"])
@@ -367,6 +383,46 @@ def create_app(
                 "within a few seconds. Each response's model_version shows which one answered."
             ),
         )
+
+    @app.post(
+        "/alerts",
+        status_code=204,
+        dependencies=[Depends(require_bearer_key)],
+        tags=["service"],
+    )
+    def receive_alerts(body: AlertmanagerWebhook) -> Response:
+        """Alertmanager's webhook: record each alert, firing or resolved (D41)."""
+        rows = []
+        for alert in body.alerts:
+            ends = alert.endsAt if alert.endsAt and alert.endsAt.year > 2000 else None
+            rows.append(
+                {
+                    "fingerprint": alert.fingerprint,
+                    "starts_at": alert.startsAt,
+                    "ends_at": ends if alert.status == "resolved" else None,
+                    "status": alert.status,
+                    "alertname": alert.labels.get("alertname", "unnamed"),
+                    "severity": alert.labels.get("severity"),
+                    "summary": alert.annotations.get("summary"),
+                    "description": alert.annotations.get("description"),
+                    "labels": alert.labels,
+                }
+            )
+            ALERTS.labels(rows[-1]["alertname"], alert.status).inc()
+            log.warning(
+                "Alert %s %s: %s",
+                rows[-1]["alertname"],
+                alert.status,
+                rows[-1]["summary"] or "",
+                extra={"alert": alert.labels, "status": alert.status},
+            )
+        store.save_alerts(rows)
+        return Response(status_code=204)
+
+    @app.get("/alerts", response_model=list[AlertRecord], tags=["operator"])
+    def alerts(limit: int = Query(50, ge=1, le=500)) -> list[dict]:
+        """Alerts from Prometheus (through Alertmanager): firing first, then the latest."""
+        return store.alerts(limit)
 
     @app.get("/pipeline/runs", response_model=list[PipelineRun], tags=["operator"])
     def pipeline_runs(limit: int = Query(20, ge=1, le=200)) -> list[dict]:

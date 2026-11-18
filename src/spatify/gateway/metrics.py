@@ -1,11 +1,11 @@
-"""Prometheus metrics exposed at /metrics (L9: Counter, Gauge, Histogram, Info, with labels).
+"""Prometheus metrics exposed at /metrics (L9: Counter, Gauge, Histogram, Summary, Info).
 
-Phase 6 adds dashboards and alert rules on top of these.
+The dashboards and alert rules in monitoring/ are built on these (D40, D41).
 """
 
 from __future__ import annotations
 
-from prometheus_client import Counter, Gauge, Histogram, Info, disable_created_metrics
+from prometheus_client import Counter, Gauge, Histogram, Info, Summary, disable_created_metrics
 
 disable_created_metrics()  # no *_created series next to every counter and histogram
 
@@ -65,4 +65,15 @@ LIKE_RATE = Gauge(
 )
 FEEDBACK_DRIFT = Gauge(
     "spatify_feedback_drift", "1 if the like rate has dropped by the threshold or more, else 0"
+)
+FEEDBACK_RANK = Summary(
+    "spatify_feedback_rank",
+    "Position in its list (1 = top) of each liked or skipped track: liked songs near the "
+    "top mean the model's order matches listeners' taste",
+    ["action", "model_version"],
+)
+ALERTS = Counter(
+    "spatify_alert_notifications_total",
+    "Alert notices received from Alertmanager (D41)",
+    ["alertname", "status"],
 )

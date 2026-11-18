@@ -1,0 +1,12 @@
+CONTAINER ID   NAME                          CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O         PIDS
+f824e0530343   spatify-frontend-1            0.48%     201MiB / 512MiB     39.25%    932kB / 4.9MB     90.4MB / 0B       27
+1bc97adf7e74   spatify-gateway-1             20.46%    406.6MiB / 512MiB   79.42%    99.1MB / 119MB    15MB / 4.1kB      51
+9675f3774a11   spatify-model-server-1        0.30%     560.7MiB / 768MiB   73.00%    35.6MB / 68.2MB   70.9MB / 11.8MB   98
+26ce85003167   spatify-mlflow-1              0.69%     392.3MiB / 768MiB   51.08%    90.3MB / 163MB    154MB / 85.7MB    69
+8f15eb847a50   spatify-worker-1              100.93%   421.5MiB / 3GiB     13.72%    55.7MB / 43.4MB   348MB / 58.6MB    34
+d18ab7c613a1   spatify-alertmanager-1        0.08%     43.04MiB / 64MiB    67.25%    11.6MB / 104MB    54MB / 7.65MB     26
+ab34d5037d7a   spatify-grafana-1             0.44%     254MiB / 512MiB     49.62%    24.3MB / 563MB    448MB / 165MB     29
+b17f9977402f   spatify-prometheus-1          0.63%     142.6MiB / 384MiB   37.14%    1.49GB / 109MB    611MB / 988MB     26
+9a7d23036037   spatify-node-exporter-1       10.68%    19.12MiB / 64MiB    29.87%    13.3MB / 280MB    18.5MB / 348kB    9
+15c07731bd48   spatify-postgres-exporter-1   1.12%     16.74MiB / 64MiB    26.16%    737MB / 352MB     14.4MB / 758kB    21
+9c15b6511bed   spatify-postgres-1            1.88%     73.36MiB / 256MiB   28.65%    205MB / 837MB     84.3MB / 315MB    19

@@ -42,7 +42,7 @@ Needs Docker with Compose, Git LFS and uv.
 |---|---|
 | `src/spatify/` | Python package: pipeline stages, model, shared code |
 | `services/` | One folder per Compose service: gateway, model server, worker, frontend |
-| `monitoring/` | Prometheus and Grafana configuration |
+| `monitoring/` | Prometheus (scrape config, recording and alert rules, their tests), Alertmanager, and Grafana (provisioning, dashboards built by `build_dashboards.py`) |
 | `scripts/` | Operator scripts (user simulation, demo helpers) |
 | `tests/` | pytest suite |
 | `data/` | DVC-tracked data (`raw/`, `base/`, `batches/`); `incoming/` is the drop folder for new batches |

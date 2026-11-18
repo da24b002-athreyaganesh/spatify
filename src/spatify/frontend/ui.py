@@ -63,18 +63,44 @@ MORE_SLIDERS = [
     ),
 ]
 
+GRAFANA_URL = os.environ.get("GRAFANA_URL", "http://localhost:3000")
+
 LINKS = [
     ("MLflow", os.environ.get("MLFLOW_UI_URL", "http://localhost:5000"),
      "experiment runs, model versions, aliases and each model's lineage"),
-    ("Grafana", os.environ.get("GRAFANA_URL", "http://localhost:3000"),
-     "live dashboards for the service, the model and the data"),
+    ("Grafana", GRAFANA_URL + "/dashboards?tag=spatify",
+     "four live dashboards: service health, model and feedback, data and pipeline, laptop"),
+    ("Prometheus targets", os.environ.get("PROMETHEUS_URL", "http://localhost:9090") + "/targets",
+     "every service Prometheus scrapes, and whether it's up"),
     ("Prometheus alerts", os.environ.get("PROMETHEUS_URL", "http://localhost:9090") + "/alerts",
-     "the alerts that are firing"),
+     "each alert rule and its state: inactive, pending or firing"),
+    ("Alertmanager", os.environ.get("ALERTMANAGER_URL", "http://localhost:9093"),
+     "alerts being sent to the console, and silences"),
     ("Ray Dashboard", os.environ.get("RAY_DASHBOARD_URL", "http://localhost:8265"),
      "the data pipeline's Ray jobs, while a Ray cluster is running"),
     ("Gateway API docs", os.environ.get("GATEWAY_DOCS_URL", "http://localhost:8000/docs"),
      "every endpoint, with a form to try each one"),
 ]  # fmt: skip
+
+
+# Panels the console's Monitoring tab embeds: (title, dashboard uid, panel id). They must
+# exist in monitoring/grafana/dashboards; tests/test_monitoring.py checks.
+GRAFANA_PANELS = [
+    ("Time to answer /recommend", "spatify-service", 8),
+    ("Requests per second", "spatify-service", 7),
+    ("Like rate by model version", "spatify-model", 8),
+    ("Like rate: latest 200 vs the 1,000 before", "spatify-model", 9),
+    ("PSI per feature, latest batch", "spatify-data", 12),
+    ("Pipeline runs in the previous hour", "spatify-data", 5),
+]
+
+
+def grafana_panel(uid: str, panel_id: int) -> str:
+    """The address of one Grafana panel on its own, for an iframe (anonymous viewing)."""
+    return (
+        f"{GRAFANA_URL}/d-solo/{uid}/spatify?orgId=1&panelId={panel_id}"
+        "&from=now-30m&to=now&refresh=10s&theme=light"
+    )
 
 
 def page_view(page: str) -> None:

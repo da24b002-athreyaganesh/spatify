@@ -1,4 +1,5 @@
-# Spatify stack: Postgres, MLflow, the model server, the gateway, the frontend and the worker.
+# Spatify stack: Postgres, MLflow, the model server, the gateway, the frontend and the worker,
+# plus monitoring: Prometheus, Alertmanager, Grafana and two exporters (D40, D41).
 #
 #   docker compose up -d --build        start (secrets come from .env; see .env.example)
 #   docker compose ps                   health of each service
@@ -6,13 +7,14 @@
 #   docker compose down                 stop (data stays in the named volumes)
 #
 # Services find each other by service name on the Compose network. Published, on
-# localhost only: the web app (8501), the gateway (8000), the MLflow UI (5000) and the
-# frontend's and worker's metrics (9101, 9102). Phase 6 adds Prometheus and Grafana.
+# localhost only: the web app (8501), the gateway (8000), the MLflow UI (5000), the
+# frontend's and worker's metrics (9101, 9102), Grafana (3000), Prometheus (9090) and
+# Alertmanager (9093).
 #
 # Memory (D30): every service has a hard limit with no swap, so a runaway service is
 # stopped and restarted instead of pushing the laptop into swap. Idle, the stack uses
-# about 1.5 GB; the worker adds up to 2 GB while the pipeline runs. `docker stats`
-# shows each service's use against its limit.
+# about 2 GB (monitoring about 0.5 GB of it); the worker adds up to 2 GB while the
+# pipeline runs. `docker stats` shows each service's use against its limit.
 
 name: spatify
 
@@ -60,6 +62,8 @@ services:
       - --backend-store-uri=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
       - --serve-artifacts
       - --artifacts-destination=/mlflow/artifacts
+      # /metrics for Prometheus (D40); the exporter keeps its counters in this folder.
+      - --expose-prometheus=/tmp/mlflow-metrics
       # Other containers call it as mlflow:5000; the host as localhost:5000.
       - --allowed-hosts=mlflow,mlflow:5000,localhost,localhost:*,127.0.0.1,127.0.0.1:*
     volumes:
@@ -91,8 +95,10 @@ services:
       # Each worker holds its own copy of the model (~280 MB); one answers in a few ms.
       WORKERS: "1"
       POLL_SECONDS: "10"
+      METRICS_PORT: "9103"  # the supervisor's metrics (D40)
     expose:
       - "8080"
+      - "9103"
     depends_on:
       mlflow:
         condition: service_healthy
@@ -216,6 +222,110 @@ services:
              "import urllib.request; urllib.request.urlopen('http://localhost:9102/metrics', timeout=4)"]
       start_period: 20s
 
+  # --- Monitoring (D40, D41). Images pinned; Prometheus, Grafana and node-exporter are
+  # the versions A4 used. Config lives in monitoring/, mounted read-only.
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    restart: unless-stopped
+    mem_limit: 384m
+    memswap_limit: 384m
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2d   # enough for the demo; keeps the disk small
+      - --web.enable-lifecycle             # curl -X POST localhost:9090/-/reload
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    environment:
+      # The gateway's /alerts wants the admin key as a Bearer token; it's written to a
+      # file only this container can read, so it isn't in the committed config (D41).
+      WEBHOOK_TOKEN: ${SPATIFY_API_KEY:?set SPATIFY_API_KEY in .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        umask 077 && printf '%s' "$$WEBHOOK_TOKEN" > /tmp/webhook_token &&
+        exec /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml
+        --storage.path=/alertmanager --web.listen-address=:9093
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    depends_on:
+      gateway:
+        condition: service_started
+    healthcheck:
+      <<: *probe
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
+
+  grafana:
+    image: grafana/grafana:12.4.13
+    restart: unless-stopped
+    mem_limit: 512m   # measured ~320 MB at start-up, falling once its migrations are done
+    memswap_limit: 512m
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}  # only to edit; viewing is open
+      GF_AUTH_ANONYMOUS_ENABLED: "true"        # anyone on this laptop can view, read-only
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ALLOW_EMBEDDING: "true"      # the console embeds panels in iframes
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"   # no plugin downloads at start-up
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/service.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+    healthcheck:
+      <<: *probe
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health >/dev/null || exit 1"]
+      start_period: 30s
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    pid: host                     # see the laptop's processes, not the container's
+    command:
+      - --path.rootfs=/host       # read the laptop's /proc, /sys and mounts through /host
+    volumes:
+      - /:/host:ro,rslave         # read-only view of the laptop's filesystem (as in A4)
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/spatify?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
   mlflow-artifacts:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:

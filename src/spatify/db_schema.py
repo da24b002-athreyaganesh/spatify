@@ -6,6 +6,7 @@
   them and records their result (D29, D36).
 - incoming_batches: every batch file the worker has seen in data/incoming, and what
   became of it (D36).
+- alerts: every alert Alertmanager has sent to the gateway, firing or resolved (D41).
 """
 
 SCHEMA = """
@@ -55,5 +56,18 @@ CREATE TABLE IF NOT EXISTS incoming_batches (
     run_id        bigint REFERENCES pipeline_runs (id),
     drifted       boolean,
     message       text
+);
+CREATE TABLE IF NOT EXISTS alerts (
+    fingerprint   text NOT NULL,
+    starts_at     timestamptz NOT NULL,
+    ends_at       timestamptz,
+    status        text NOT NULL CHECK (status IN ('firing', 'resolved')),
+    alertname     text NOT NULL,
+    severity      text,
+    summary       text,
+    description   text,
+    labels        jsonb NOT NULL DEFAULT '{}',
+    received_at   timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (fingerprint, starts_at)
 );
 """

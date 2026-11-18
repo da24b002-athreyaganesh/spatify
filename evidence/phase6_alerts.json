@@ -1,0 +1,134 @@
+[
+    {
+        "fingerprint": "98014e73f24cab21",
+        "alertname": "DataDrift",
+        "status": "firing",
+        "severity": "warning",
+        "summary": "New tracks differ from the training data",
+        "description": "The latest batch in data/incoming has drifted (PSI); the worker retrains on it. Details: console, Data drift.",
+        "starts_at": "2026-11-18T11:03:40.199000Z",
+        "ends_at": null,
+        "received_at": "2026-11-18T11:03:50.306886Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-18T10:03:44.834000Z",
+        "ends_at": "2026-11-18T10:04:44.834000Z",
+        "received_at": "2026-11-18T10:04:54.939328Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-17T17:00:49.834000Z",
+        "ends_at": "2026-11-17T18:18:29.834000Z",
+        "received_at": "2026-11-17T18:19:00.186108Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-17T03:00:09.834000Z",
+        "ends_at": "2026-11-17T16:59:44.834000Z",
+        "received_at": "2026-11-17T16:59:50.135826Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-17T01:32:44.834000Z",
+        "ends_at": "2026-11-17T02:59:04.834000Z",
+        "received_at": "2026-11-17T02:59:44.656231Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-16T18:52:19.834000Z",
+        "ends_at": "2026-11-17T01:31:39.834000Z",
+        "received_at": "2026-11-17T01:31:47.135914Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-16T16:41:14.834000Z",
+        "ends_at": "2026-11-16T18:51:14.834000Z",
+        "received_at": "2026-11-16T18:51:25.765510Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-16T12:16:29.834000Z",
+        "ends_at": "2026-11-16T16:40:09.834000Z",
+        "received_at": "2026-11-16T16:40:40.395171Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-16T09:03:19.834000Z",
+        "ends_at": "2026-11-16T12:15:24.834000Z",
+        "received_at": "2026-11-16T12:16:12.566061Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-15T16:08:59.834000Z",
+        "ends_at": "2026-11-16T09:02:14.834000Z",
+        "received_at": "2026-11-16T09:02:48.442589Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-15T11:09:24.834000Z",
+        "ends_at": "2026-11-15T16:07:49.834000Z",
+        "received_at": "2026-11-15T16:08:23.374823Z"
+    },
+    {
+        "fingerprint": "572d184cf86479f7",
+        "alertname": "ServiceDown",
+        "status": "resolved",
+        "severity": "critical",
+        "summary": "frontend is down",
+        "description": "Prometheus hasn't been able to scrape frontend:9101 for a minute.",
+        "starts_at": "2026-11-15T09:56:19.834000Z",
+        "ends_at": "2026-11-15T11:04:29.834000Z",
+        "received_at": "2026-11-15T11:05:02.459728Z"
+    }
+]

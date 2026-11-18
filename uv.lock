@@ -3016,6 +3016,19 @@ wheels = [
 ]
 
 [[package]]
+name = "prometheus-flask-exporter"
+version = "0.23.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "flask" },
+    { name = "prometheus-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/40/736bd2cb19b065cea395deb57b5b520a2df105dab92af3fb200ee560ad92/prometheus_flask_exporter-0.23.2.tar.gz", hash = "sha256:41fc9bbd7d48cc958ed8384aacf60c3621d9e903768be61c4e7f0c63872eaf1a", size = 31801, upload-time = "2025-03-11T23:05:30.409Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/04/486040e241708a723ee7673d98733c35f2cf081f63ced0091124b8572177/prometheus_flask_exporter-0.23.2-py3-none-any.whl", hash = "sha256:94922a636d4c1d8b68e1ee605c30a23e9bbb0b21756df8222aa919634871784c", size = 19002, upload-time = "2025-03-11T23:05:29.176Z" },
+]
+
+[[package]]
 name = "prompt-toolkit"
 version = "3.0.53"
 source = { registry = "https://pypi.org/simple" }
@@ -4220,6 +4233,8 @@ frontend = [
 ]
 mlflow-server = [
     { name = "mlflow" },
+    { name = "prometheus-client" },
+    { name = "prometheus-flask-exporter" },
     { name = "psycopg", extra = ["binary"] },
 ]
 pipeline = [
@@ -4265,8 +4280,10 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pandas", specifier = ">=3.1.0" },
     { name = "prometheus-client", marker = "extra == 'frontend'", specifier = ">=0.26.0" },
+    { name = "prometheus-client", marker = "extra == 'mlflow-server'", specifier = ">=0.26.0" },
     { name = "prometheus-client", marker = "extra == 'serving'", specifier = ">=0.26.0" },
     { name = "prometheus-client", marker = "extra == 'worker'", specifier = ">=0.26.0" },
+    { name = "prometheus-flask-exporter", marker = "extra == 'mlflow-server'", specifier = ">=0.23.2" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'mlflow-server'", specifier = ">=3.3.6" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'serving'", specifier = ">=3.3.6" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'worker'", specifier = ">=3.3.6" },

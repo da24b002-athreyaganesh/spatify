@@ -100,6 +100,11 @@ def pipeline_dag() -> dict:
     return _call("GET", "/pipeline/dag", "pipeline_dag")
 
 
+def alerts(limit: int = 50) -> list[dict]:
+    """Alerts from Prometheus, through Alertmanager and the gateway: firing first (D41)."""
+    return _call("GET", "/alerts", "alerts", params={"limit": limit})
+
+
 def pipeline_runs(limit: int = 20) -> list[dict]:
     return _call("GET", "/pipeline/runs", "pipeline_runs", params={"limit": limit})
 

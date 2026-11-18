@@ -1,13 +1,18 @@
 """The model-server supervisor follows the champion alias (no real MLflow or processes)."""
 
 import json
+import os
+import subprocess
+import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from prometheus_client import REGISTRY
 
-from spatify.model_server import RegistryUnavailableError, Supervisor, alias_version
+from spatify.model_server import RegistryUnavailableError, Supervisor, alias_version, tree_rss
 
 # What MLflow's REST API answers for an alias lookup (checked against the running server).
 ANSWERS = {
@@ -140,3 +145,61 @@ def test_keeps_serving_while_the_registry_is_down():
     alias["v"] = RegistryUnavailableError("connection refused")
     supervisor.step()
     assert len(launched) == 1 and launched[0].code is None
+
+
+# --- Metrics (D40) --------------------------------------------------------------------
+
+
+def sample(name, **labels):
+    return REGISTRY.get_sample_value(name, labels) or 0.0
+
+
+def test_metrics_say_what_is_served_and_why_it_restarted():
+    before = {r: sample("spatify_model_server_launches_total", reason=r)
+              for r in ("start", "alias_moved", "crashed")}  # fmt: skip
+    alias = {"v": "4"}
+    supervisor, launched = make(alias)
+    supervisor.step()
+    assert sample("spatify_model_server_serving_version") == 4
+    assert sample("spatify_model_server_process_up") == 1
+    alias["v"] = "5"
+    supervisor.step()
+    launched[-1].code = 1  # crashed
+    assert sample("spatify_model_server_process_up") == 0
+    supervisor.step()
+    after = {r: sample("spatify_model_server_launches_total", reason=r) for r in before}
+    assert {r: after[r] - before[r] for r in before} == {"start": 1, "alias_moved": 1, "crashed": 1}
+    assert sample("spatify_model_server_serving_version") == 5
+
+
+def test_a_switch_is_timed_until_the_new_server_answers():
+    answers = iter([False, False, True])
+    supervisor = Supervisor(lambda: "1", FakeProcess, ready=lambda: next(answers))
+    count = sample("spatify_model_server_ready_seconds_count")
+    seconds = supervisor.time_ready(time.monotonic())
+    assert seconds is not None and 0.9 < seconds < 5  # two failed pings, 0.5 s apart
+    assert sample("spatify_model_server_ready_seconds_count") == count + 1
+
+    never = Supervisor(lambda: "1", FakeProcess, ready=lambda: False, ready_timeout=0.6)
+    assert never.time_ready(time.monotonic()) is None
+
+
+def test_memory_counts_the_whole_process_tree():
+    """A parent that started a child: the tree holds more than the parent alone."""
+    parent = subprocess.Popen(
+        [sys.executable, "-c",
+         "import subprocess, sys, time; "
+         "subprocess.Popen([sys.executable, '-c', 'import time; x = bytes(range(256)) * 200_000; "
+         "time.sleep(30)']); time.sleep(30)"]
+    )  # fmt: skip
+    try:
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline and tree_rss(parent.pid) < 50_000_000:
+            time.sleep(0.2)
+        own = int(open(f"/proc/{parent.pid}/statm").read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
+        assert tree_rss(parent.pid) > own + 40_000_000  # the child's 50 MB is included
+    finally:
+        subprocess.run(["pkill", "-P", str(parent.pid)], check=False)
+        parent.kill()
+        parent.wait()
+    assert tree_rss(2**22 + 12345) == 0  # no such process

@@ -17,6 +17,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 from mlflow.exceptions import MlflowException
+from prometheus_client import REGISTRY
 
 from spatify.gateway.app import create_app
 from spatify.gateway.feedback_drift import feedback_drift
@@ -68,6 +69,20 @@ class FakeStore:
 
     def get_recommendation(self, request_id):
         return self.lists.get(request_id)
+
+    def save_alerts(self, alerts):
+        stored = getattr(self, "stored_alerts", {})
+        for a in alerts:
+            stored[(a["fingerprint"], a["starts_at"])] = {**a, "received_at": datetime.now(UTC)}
+        self.stored_alerts = stored
+
+    def alerts(self, limit):
+        rows = sorted(
+            getattr(self, "stored_alerts", {}).values(),
+            key=lambda a: (a["status"] == "firing", a["received_at"]),
+            reverse=True,
+        )
+        return rows[:limit]
 
     def save_feedback(self, request_id, track_id, rank, action, version, run_id):
         self.feedback[(request_id, track_id)] = {"rank": rank, "action": action, "version": version}
@@ -555,3 +570,82 @@ def test_drift_lists_batches_newest_first_with_their_scores(pipeline_dir):
     assert bad["features"] == [] and "invalid" in bad["message"]  # rejected: nothing to score
     assert shifted["drifted"] and shifted["features"][0]["level"] == "major"
     assert drift["reference_rows"] == 79970
+
+
+# --- Alerts from Alertmanager, and the rank of rated tracks (D40, D41) -----------------
+
+
+def alertmanager(status: str, ends: str = "0001-01-01T00:00:00Z") -> dict:
+    """A webhook payload as Alertmanager sends it (abridged)."""
+    return {
+        "version": "4",
+        "status": status,
+        "receiver": "gateway",
+        "alerts": [
+            {
+                "status": status,
+                "labels": {"alertname": "DataDrift", "severity": "warning", "job": "worker"},
+                "annotations": {"summary": "New tracks differ from the training data"},
+                "startsAt": "2026-11-15T10:00:00Z",
+                "endsAt": ends,
+                "fingerprint": "abc123",
+                "generatorURL": "http://prometheus:9090/graph",
+            }
+        ],
+    }
+
+
+def test_alerts_need_the_key_as_a_bearer_token(gw):
+    body = alertmanager("firing")
+    assert gw.client.post("/alerts", json=body).status_code == 401
+    assert gw.client.post("/alerts", json=body, headers={"X-API-Key": KEY}).status_code == 401
+    wrong = {"Authorization": "Bearer nope"}
+    assert gw.client.post("/alerts", json=body, headers=wrong).status_code == 401
+    assert gw.client.get("/alerts").json() == []
+
+
+def test_an_alert_fires_then_resolves_as_one_record(gw):
+    bearer = {"Authorization": f"Bearer {KEY}"}
+    count = (
+        REGISTRY.get_sample_value(
+            "spatify_alert_notifications_total", {"alertname": "DataDrift", "status": "firing"}
+        )
+        or 0
+    )
+    assert gw.client.post("/alerts", json=alertmanager("firing"), headers=bearer).status_code == 204
+    [firing] = gw.client.get("/alerts").json()
+    assert firing["status"] == "firing" and firing["ends_at"] is None  # Alertmanager's year 1
+    assert firing["alertname"] == "DataDrift" and firing["severity"] == "warning"
+    assert (
+        REGISTRY.get_sample_value(
+            "spatify_alert_notifications_total", {"alertname": "DataDrift", "status": "firing"}
+        )
+        == count + 1
+    )
+
+    resolved = alertmanager("resolved", ends="2026-11-15T10:05:00Z")
+    assert gw.client.post("/alerts", json=resolved, headers=bearer).status_code == 204
+    [record] = gw.client.get("/alerts").json()  # the same alert, updated
+    assert record["status"] == "resolved" and record["ends_at"].startswith("2026-11-15T10:05")
+
+
+def test_firing_alerts_come_first(gw):
+    bearer = {"Authorization": f"Bearer {KEY}"}
+    old = alertmanager("resolved", ends="2026-11-15T10:05:00Z")
+    new = alertmanager("firing")
+    new["alerts"][0] |= {"fingerprint": "def456", "labels": {"alertname": "HighLatency"}}
+    gw.client.post("/alerts", json=new, headers=bearer)
+    gw.client.post("/alerts", json=old, headers=bearer)  # arrives later, but resolved
+    assert [a["alertname"] for a in gw.client.get("/alerts").json()] == ["HighLatency", "DataDrift"]
+
+
+def test_the_rank_of_each_rated_track_is_summarised(gw):
+    def rank_sum():
+        name = "spatify_feedback_rank_sum"
+        return REGISTRY.get_sample_value(name, {"action": "like", "model_version": "2"}) or 0
+
+    before = rank_sum()
+    shown = gw.client.post("/recommend", json={"track_id": "a", "k": 3}).json()
+    rated = {"request_id": shown["request_id"], "track_id": "t2", "action": "like"}
+    assert gw.client.post("/feedback", json=rated).status_code == 201
+    assert rank_sum() == before + 3  # t2 was third

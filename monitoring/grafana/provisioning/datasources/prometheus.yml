@@ -1,0 +1,15 @@
+# Grafana loads this at start-up, so the Prometheus data source exists without clicking.
+# From A4, pointed at the Compose service instead of localhost.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus          # the dashboards refer to this uid
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 5s       # = Prometheus scrape_interval; Grafana never queries finer
+      httpMethod: POST

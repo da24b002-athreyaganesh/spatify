@@ -65,6 +65,7 @@ VERSIONS = [
 class FakeGateway:
     def __init__(self):
         self.calls, self.down, self.drift, self.explore = [], False, None, False
+        self.alerts = []
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         if self.down:
@@ -157,6 +158,8 @@ class FakeGateway:
             if not admin:
                 return httpx.Response(401, json={"detail": "Missing or wrong X-API-Key header"})
             return httpx.Response(202, json={"id": 7, "status": "requested"})
+        if path == "/alerts":
+            return httpx.Response(200, json=self.alerts)
         if path == "/drift":
             if self.drift is None:
                 return httpx.Response(404, json={"detail": "No drift report yet"})
@@ -370,3 +373,78 @@ def test_console_warns_when_the_like_rate_falls(gateway):
     at = page("console")
     assert "dropped by" not in texts(at.warning)
     assert "once enough likes and skips" in texts(at.caption)
+
+
+ALERT = {
+    "fingerprint": "abc",
+    "alertname": "FeedbackDrift",
+    "status": "firing",
+    "severity": "warning",
+    "summary": "Listeners are liking fewer songs",
+    "description": "The like rate has dropped by 15 points or more.",
+    "starts_at": "2026-11-15T10:00:00Z",
+    "ends_at": None,
+    "received_at": "2026-11-15T10:00:10Z",
+}
+
+
+def test_monitoring_tab_says_when_nothing_is_firing_and_embeds_grafana(gateway):
+    at = page("console")
+    assert "No alerts are firing" in texts(at.success)
+    frames = at.get("iframe")
+    assert len(frames) == len(ui.GRAFANA_PANELS)
+    assert all("/d-solo/spatify-" in str(f.proto) for f in frames)
+
+
+def test_monitoring_tab_shows_firing_alerts_first_then_the_history(gateway):
+    resolved = ALERT | {
+        "fingerprint": "old",
+        "alertname": "DataDrift",
+        "status": "resolved",
+        "summary": "New tracks differ",
+        "ends_at": "2026-11-15T09:00:00Z",
+    }
+    gateway.alerts = [ALERT, resolved]
+    at = page("console")
+    assert "Listeners are liking fewer songs" in texts(at.warning)
+    assert "No alerts are firing" not in texts(at.success)
+    history = next(d.value for d in at.dataframe if "alertname" in d.value.columns)
+    assert list(history["status"]) == ["firing", "resolved"]
+
+
+def test_monitoring_tab_still_shows_grafana_when_alerts_are_unavailable(gateway):
+    original = gateway.handle
+
+    def no_alerts(request):
+        if request.url.path == "/alerts":
+            return httpx.Response(503, json={"detail": "The feedback store is unavailable"})
+        return original(request)
+
+    api.TRANSPORT = httpx.MockTransport(no_alerts)
+    at = page("console")
+    assert "feedback store is unavailable" in texts(at.error)
+    assert len(at.get("iframe")) == len(ui.GRAFANA_PANELS)
+
+
+def test_metrics_are_served_from_start_up_not_from_the_first_page_view(monkeypatch):
+    """`python -m spatify.frontend` starts /metrics before Streamlit runs any page."""
+    import socket
+    import urllib.request
+
+    from spatify.frontend import __main__ as entry
+    from spatify.frontend import metrics
+
+    with socket.socket() as probe:  # a free port
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    order = []
+    monkeypatch.setenv("METRICS_PORT", str(port))
+    monkeypatch.setattr(entry.cli, "main", lambda: order.append("streamlit") or 0)
+    real = entry.start_metrics_server
+    monkeypatch.setattr(entry, "start_metrics_server", lambda p: order.append("metrics") or real(p))
+    with pytest.raises(SystemExit):
+        entry.main()
+    assert order == ["metrics", "streamlit"]
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}/metrics", timeout=5) as response:
+        assert b"spatify_frontend_" in response.read()
+    assert metrics.start_metrics_server(port)  # app.py's later call: no "address in use"

@@ -2,6 +2,10 @@
 
 Streamlit needs the app's file path, which inside the Docker image sits in site-packages;
 this finds it and starts Streamlit with production settings.
+
+It also starts the metrics server first. Streamlit runs app.py only when a browser opens
+the app, so a metrics server started there would leave Prometheus seeing the frontend
+down (and ServiceDown firing) after every restart until someone visited the page.
 """
 
 import os
@@ -10,8 +14,13 @@ from pathlib import Path
 
 from streamlit.web import cli
 
+from spatify.frontend.metrics import start_metrics_server
+
 
 def main() -> None:
+    port = int(os.environ.get("METRICS_PORT", "0"))
+    if port:
+        start_metrics_server(port)  # app.py's own call then does nothing
     app = Path(__file__).with_name("app.py")
     sys.argv = [
         "streamlit",

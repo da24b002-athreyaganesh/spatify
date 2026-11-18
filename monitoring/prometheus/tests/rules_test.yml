@@ -1,0 +1,179 @@
+# Unit tests for the recording and alert rules (promtool test rules). Each test feeds
+# synthetic series and checks which alerts fire, when, and with which labels and text.
+#   docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus:ro" \
+#     --entrypoint promtool prom/prometheus:v3.15.0 test rules /etc/prometheus/tests/rules_test.yml
+# tests/test_monitoring.py runs it too.
+#
+# Series notation: 'a+bxN' starts at a and adds b N times, one step per `interval`.
+
+rule_files:
+  - ../rules/recording.yml
+  - ../rules/alerts.yml
+
+evaluation_interval: 15s
+
+tests:
+  # p95 /recommend latency: every request takes 0.3-0.5 s, so p95 is about 0.49 s.
+  - interval: 15s
+    input_series:
+      - series: 'spatify_gateway_request_seconds_bucket{endpoint="/recommend", le="0.3"}'
+        values: '0x30'
+      - series: 'spatify_gateway_request_seconds_bucket{endpoint="/recommend", le="0.5"}'
+        values: '0+10x30'
+      - series: 'spatify_gateway_request_seconds_bucket{endpoint="/recommend", le="+Inf"}'
+        values: '0+10x30'
+    promql_expr_test:
+      - expr: spatify:recommend_latency_seconds:p95_1m
+        eval_time: 2m
+        exp_samples:
+          - labels: 'spatify:recommend_latency_seconds:p95_1m'
+            value: 0.49
+    alert_rule_test:
+      - eval_time: 2m  # condition true, but not yet for 2 minutes: pending
+        alertname: RecommendLatencyHigh
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: RecommendLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "p95 /recommend latency above 300 ms"
+              description: "The 95th-percentile time to answer /recommend is 490ms."
+
+  # Fast answers: no latency alert.
+  - interval: 15s
+    input_series:
+      - series: 'spatify_gateway_request_seconds_bucket{endpoint="/recommend", le="0.05"}'
+        values: '0+10x30'
+      - series: 'spatify_gateway_request_seconds_bucket{endpoint="/recommend", le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: RecommendLatencyHigh
+        exp_alerts: []
+
+  # 1 request in 10 answered 503: a 10% error ratio.
+  - interval: 15s
+    input_series:
+      - series: 'spatify_gateway_requests_total{endpoint="/recommend", method="POST", status="200"}'
+        values: '0+9x40'
+      - series: 'spatify_gateway_requests_total{endpoint="/recommend", method="POST", status="503"}'
+        values: '0+1x40'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: GatewayErrorsHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "More than 5% of gateway requests are failing"
+              description: "10% of requests got a 5xx answer over the last 5 minutes."
+
+  # No traffic at all: no error-ratio value, so no alert (not 0/0).
+  - interval: 15s
+    input_series:
+      - series: 'spatify_gateway_requests_total{endpoint="/recommend", method="POST", status="200"}'
+        values: '5x40'
+    promql_expr_test:
+      - expr: spatify:gateway_error_ratio:rate5m
+        eval_time: 8m
+        exp_samples: []
+
+  # A drifted batch arrives at 30 s; a clean one at 2 min.
+  - interval: 15s
+    input_series:
+      - series: 'spatify_drift_detected{job="worker", instance="worker:9102"}'
+        values: '0 0 1x5 0x5'
+    alert_rule_test:
+      - eval_time: 15s
+        alertname: DataDrift
+        exp_alerts: []
+      - eval_time: 45s
+        alertname: DataDrift
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: worker
+              instance: worker:9102
+            exp_annotations:
+              summary: "New tracks differ from the training data"
+              description: "The latest batch in data/incoming has drifted (PSI); the worker retrains on it. Details: console, Data drift."
+      - eval_time: 2m30s
+        alertname: DataDrift
+        exp_alerts: []
+
+  # The like rate collapses (a bad model) for 2 minutes.
+  - interval: 15s
+    input_series:
+      - series: 'spatify_feedback_drift{job="gateway", instance="gateway:8000"}'
+        values: '0 1x8'
+    alert_rule_test:
+      - eval_time: 45s
+        alertname: FeedbackDrift
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: FeedbackDrift
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: gateway
+              instance: gateway:8000
+            exp_annotations:
+              summary: "Listeners are liking fewer songs"
+              description: "The like rate has dropped by 15 points or more. If a model was promoted recently, consider rolling back (console, Models)."
+
+  # A run fails at 1 minute; the alert clears 15 minutes later.
+  - interval: 1m
+    input_series:
+      - series: 'spatify_pipeline_runs_total{job="worker", trigger="new_data", status="failed"}'
+        values: '0 1x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: PipelineRunFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "A pipeline run failed"
+              description: "The champion keeps serving. The run's message in the console (Pipeline, Run history) says why."
+      - eval_time: 25m
+        alertname: PipelineRunFailed
+        exp_alerts: []
+
+  # The worker stops answering scrapes.
+  - interval: 15s
+    input_series:
+      - series: 'up{job="worker", instance="worker:9102"}'
+        values: '1 1 0x10'
+      - series: 'up{job="gateway", instance="gateway:8000"}'
+        values: '1x12'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ServiceDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: worker
+              instance: worker:9102
+            exp_annotations:
+              summary: "worker is down"
+              description: "Prometheus hasn't been able to scrape worker:9102 for a minute."
+
+  # Like rate per version: version 3 got 4 likes and 6 skips, version 4 only skips.
+  - interval: 1m
+    input_series:
+      - series: 'spatify_feedback_total{action="like", model_version="3"}'
+        values: '0 4x10'
+      - series: 'spatify_feedback_total{action="skip", model_version="3"}'
+        values: '0 6x10'
+      - series: 'spatify_feedback_total{action="skip", model_version="4"}'
+        values: '0 5x10'
+    promql_expr_test:
+      - expr: spatify:like_rate:by_version_30m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'spatify:like_rate:by_version_30m{model_version="3"}'
+            value: 0.4
+          - labels: 'spatify:like_rate:by_version_30m{model_version="4"}'
+            value: 0

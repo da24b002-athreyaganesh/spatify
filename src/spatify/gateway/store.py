@@ -134,6 +134,30 @@ class Store:
                 "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT %s", (limit,)
             ).fetchall()
 
+    def save_alerts(self, alerts: list[dict]) -> None:
+        """Record alerts from Alertmanager; a later notice of the same alert updates it."""
+        with self._timed("save_alerts") as conn:
+            for a in alerts:
+                conn.execute(
+                    "INSERT INTO alerts (fingerprint, starts_at, ends_at, status, alertname,"
+                    " severity, summary, description, labels)"
+                    " VALUES (%(fingerprint)s, %(starts_at)s, %(ends_at)s, %(status)s,"
+                    " %(alertname)s, %(severity)s, %(summary)s, %(description)s, %(labels)s)"
+                    " ON CONFLICT (fingerprint, starts_at) DO UPDATE SET"
+                    " status = EXCLUDED.status, ends_at = EXCLUDED.ends_at,"
+                    " summary = EXCLUDED.summary, description = EXCLUDED.description,"
+                    " received_at = now()",
+                    {**a, "labels": Jsonb(a["labels"])},
+                )
+
+    def alerts(self, limit: int) -> list[dict]:
+        """Firing alerts first, then the most recently updated."""
+        with self._timed("alerts") as conn:
+            return conn.execute(
+                "SELECT * FROM alerts ORDER BY status = 'firing' DESC, received_at DESC LIMIT %s",
+                (limit,),
+            ).fetchall()
+
     def pipeline_counts(self) -> dict[str, int]:
         with self._timed("pipeline_counts") as conn:
             rows = conn.execute(

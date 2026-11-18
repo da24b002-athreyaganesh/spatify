@@ -235,6 +235,7 @@ One entry per design decision: what was chosen, why, and what else was considere
   - **A failure anywhere else** marks that run's batches as failed, so the worker doesn't retry them every 15 s.
   - **A run left 'running' by a worker that stopped mid-run** is marked failed when the worker restarts. Compose gives a stopping worker 3 minutes to finish its run.
   - **No retry storms.** An unexpected error marks the run's batches failed too, and after any failed run the worker waits a full poll interval. The first version had neither: a missing user account made it fail and retry about once a second (236 runs). Restarting the worker puts failed batches back in line, so after fixing a cause, a restart retries.
+- **A batch dropped in again after removal counts as new** (fixed in step 6.3). The first version matched files by name and SHA-256 and skipped a returning file whose record said `removed`, so re-running a batch did nothing.
 - **It runs the repo's own code** (`PYTHONPATH=/repo/src`; the image holds only the dependencies). So the stages that run are exactly the code DVC hashed as their dependencies, even after an edit without a rebuild.
 - **It runs as the repo's owner** (uid 1000), since the NTFS mount lets only that user write. The image has an account with that uid (a build argument): DVC and MLflow look up the current user's name, and with only a bare uid the first version failed with `getpwuid(): uid not found`.
 - **Memory:** a 3 GB limit, and 1.5 GB of `/dev/shm` for Ray's 1 GB object store. Ray is capped at 4 CPUs (D30).
@@ -257,6 +258,7 @@ One entry per design decision: what was chosen, why, and what else was considere
   - **Against a Fisher-weight champion, like version 1** (`evidence/phase5_feedback_offline_fisher.log`, 4,000 ratings): the like rate still rises (44–49% → 49–55%), but NDCG@3 on the champion's held-out lists is mixed (0.576 → 0.553, 0.569 → 0.572, 0.583 → 0.629). The gate would promote in one seed of three.
   - **The learnt weights** put energy, valence, acousticness and danceability on top in every seed. Those are the four features the simulated listeners care about most (D38), and the system never sees that list.
 - **The real run (step 5.4, `evidence/phase5_worker_feedback.log`):** with 3,955 ratings, `all-feedback` scored 0.577 on 72 held-out lists against 0.483 for `all-uniform`. The Fisher champion scored 0.587, so the best candidate was another `all-fisher` (gain 0.0) and nothing was promoted.
+- **The second real run (2026-11-18, during step 6.3's load):** with 5,955 ratings, `all-feedback` scored 0.584 against the champion's 0.498 on 84 held-out lists and was promoted (version 8). It won on version 1's own lists too (0.585 against 0.487 on 72 of them), so the gate's bias didn't decide it. It had half as many ratings again to learn from, and on about 80 lists the comparison varies from run to run. Retrain to redeploy took 76.5 s; the model server was answering 4.8 s after it started version 8. Listeners got the gateway's friendly 503 for about 11 s (795 requests), too short for `GatewayErrorsHigh`, which needs 2 minutes.
 - **Why the gate and the like rate disagree:** the held-out lists are the champion's own picks, ranked by its own weights. Re-ranking them favours the model that chose them (off-policy evaluation). The like rate on a model's own lists is the fair test, but it needs live traffic: shadow or canary serving with the `challenger` alias (L6, Stretch). Until then the gate is conservative. It can keep a better model out, but it never lets a worse one in.
 - **Exploration** (the hidden feedback loop from L1): in a list of 10, the lowest slot goes to a random track (`EXPLORATION_RATE` 0.1; lists under 10 get none). It is stored in `recommendations.explored`, carried into the snapshot, and shown as a "wildcard" on Discover. Without it, feedback covers only tracks the model already ranks high, so it can't learn where its ranking is wrong. **Cost:** random picks are liked about 6% of the time, against about 42% for the model's.
 - **Feedback drift:** the like rate of the latest 200 ratings against the 1,000 before them. It's drift at a drop of 0.15 or more, once there are 200 recent and 500 earlier ratings. It shows on `/drift`, the console and the gauges `spatify_feedback_like_rate{window}` and `spatify_feedback_drift`. A falling like rate while PSI stays stable is L1's concept-drift signal.
@@ -291,3 +293,76 @@ One entry per design decision: what was chosen, why, and what else was considere
   4. The broken version stays registered, tagged, for the record.
 - **If nobody rolls back:** after 2,000 more ratings, the worker's feedback trigger retrains, and a challenger will most likely beat the broken champion at the gate. That is a slower, automatic way out.
 - **Why a script, not a console button:** a button that deploys a broken model has no place in a real operator console.
+
+## D40. Monitoring: Prometheus scrapes every component on the Compose network
+- **What:** Prometheus (5-second scrapes, 2 days of data) and two exporters join the Compose stack. Every target is a service name, not `localhost` as in A4's host networking. Each one:
+
+  | Job | What it reports |
+  |---|---|
+  | `gateway` | requests, latency (histograms), model-server calls, feedback-store queries, feedback, like rates, alerts received |
+  | `frontend` | page views, gateway calls by outcome, errors shown to listeners |
+  | `worker` | pipeline runs, stage times, data-stage throughput, PSI, pending feedback, retrain-to-redeploy |
+  | `model-server` | the supervisor: version served, restarts by reason, switch time, memory of the serving processes |
+  | `mlflow` | the tracking server's requests (`mlflow server --expose-prometheus`) |
+  | `postgres` | postgres-exporter: up, rows per table, database size |
+  | `node` | node-exporter: the laptop's CPU, memory and disk (A4's service and relabel rules) |
+  | `prometheus`, `alertmanager`, `grafana` | the monitoring stack itself |
+
+- **Metrics added for this phase:**
+  - **The model server's supervisor.** `mlflow models serve` has no `/metrics`, so the supervisor exports the server's side. The gateway already measures the requests. The memory gauge adds up the whole process tree from `/proc`, because the model lives in a child process.
+  - **The worker** turns each data stage's rows per second from `metrics/<stage>.json` into gauges, so Ray Data throughput is on a dashboard, not only in DVC.
+  - **The gateway:**
+    - a **Summary** of the list position of every liked and skipped song. It completes L9's metric types: Counter, Gauge, Histogram, Summary and Info. Its average shows whether liked songs sit near the top.
+    - a counter of alerts received.
+  - **MLflow:** `prometheus-flask-exporter` joined the `mlflow-server` extra. `--expose-prometheus` was checked on MLflow 3.17.1 against a throwaway server before relying on it.
+- **The frontend's metrics start with its process** (found in step 6.3). Streamlit runs `app.py` only when a browser opens the app, so a metrics server started there left `frontend:9101` closed after every restart until someone visited. `ServiceDown` fired for the frontend after each rebuild. `python -m spatify.frontend` now starts it before Streamlit.
+- **Feedback store:** postgres-exporter, rather than only the gateway's view of its own queries, so the store itself reports (the problem statement's "all major components emit metrics").
+- **Memory:** limits of Prometheus 384 MB, Grafana 512 MB (it used about 320 MB while starting), Alertmanager, node-exporter and postgres-exporter 64 MB each. Together they use about 0.5 GB idle.
+- **Considered:**
+  - The Pushgateway: every Spatify process is long-running and can be scraped. The worker's pipeline stages are short, but their results reach the worker's own gauges.
+  - cAdvisor for per-container memory: about 100 MB more, and the supervisor and process gauges cover the services that matter.
+  - Scraping Ray's own metrics: Ray runs only inside pipeline stages, so there's nothing to scrape between runs.
+
+## D41. Alerts: rules in Prometheus, delivered by Alertmanager to the gateway
+- **Recording rules:**
+  - p95 `/recommend` latency, the 5xx share, requests per endpoint, and the like rate per model version.
+  - The like-rate rule gives 0%, not nothing, for a version with skips but no likes (a broken model must show up).
+  - The alerts and dashboards share these rules, so both read the same numbers.
+- **Alert rules:**
+
+  | Alert | Fires when |
+  |---|---|
+  | `ServiceDown` | a target hasn't been scraped for 1 minute |
+  | `ModelServerUnreachable` | the gateway's probe of the model server has failed for 1 minute |
+  | `RecommendLatencyHigh` | p95 `/recommend` latency is above 300 ms for 2 minutes (the problem statement's target) |
+  | `GatewayErrorsHigh` | more than 5% of requests get a 5xx answer |
+  | `DataDrift` | the worker's verdict on the latest batch is "drifted" (D35) |
+  | `FeedbackDrift` | the gateway's feedback-drift flag is on (D37) |
+  | `PipelineRunFailed` | a run failed in the last 15 minutes |
+  | `HostLowMemory` | less than 10% of memory is available (from A4) |
+
+  **Tested** with promtool unit tests (`monitoring/prometheus/tests/rules_test.yml`): synthetic series in, and the exact alerts and their text out.
+- **Delivery:** Alertmanager groups alerts by name and posts firing and resolved alerts to the gateway's `POST /alerts`. The gateway stores them in Postgres, and the console's Monitoring tab shows the firing ones first.
+  - **Why the gateway:** the lecture's sample posts to webhook.site, an outside service. A local receiver keeps alerts on the laptop and puts them where operators already look.
+  - **Authentication:** the endpoint wants the admin key as a Bearer token. Alertmanager's container writes it from `.env` to a file only it can read, so no secret is in the committed config.
+- **Alerts don't act:**
+  - The worker already retrains on drift by itself (D36), so a `DataDrift` webhook that queued a retrain would start the same retrain twice.
+  - `FeedbackDrift` is for an operator to judge (D37, D39).
+- **A critical alert hides the warnings** it causes on the same job (an inhibit rule). If the gateway is down, its latency and error alerts would only repeat that.
+
+## D42. Dashboards: generated from one spec, embedded in the console
+- **Four dashboards**, provisioned from files into a Grafana folder "Spatify":
+  - **Service health:** what's up, traffic, latency, errors, the feedback store, MLflow and the frontend.
+  - **Model and feedback:** the version served and its switches, like rates by version and over time, the position of liked songs, lists served, and Postgres row counts.
+  - **Data and pipeline:** runs, run and stage times, Ray Data throughput, and PSI per feature (latest batch and over time).
+  - **Laptop and app load:** A4's CPU-vs-traffic and memory panels, plus the monitoring stack's own cost.
+- **Generated, not hand-edited:**
+  - `monitoring/grafana/build_dashboards.py` builds all 56 panels with the same helpers, so A4's 7 commandments hold everywhere. Okabe-Ito colours; series in a panel differ by line style too; named axes that say "linear"; a unit on every panel; a legend whenever there's more than one series; a title and a one-paragraph description on every panel.
+  - `tests/test_monitoring.py` checks all of this. It also checks that the JSON matches the builder, that every query names a metric something exports (a typo can't leave an empty panel), and that promtool parses every query.
+- **Series that come and go** (model versions, pipeline triggers) are shown as labelled bars, not lines. Colours fixed by name can't follow versions that don't exist yet, and Grafana's own palette isn't colour-blind safe.
+- **AI attribution, as in A4:** every query starts with a `# AI-generated PromQL` comment line saying what it computes, and so does every rule in the rule files.
+- **Viewing:**
+  - Grafana lets anyone on the laptop view (anonymous Viewer) and allows embedding. Editing needs the admin login.
+  - The console's Monitoring tab embeds six panels as iframes (`ui.GRAFANA_PANELS`; a test checks they exist), so an operator sees alerts and live charts without leaving the console. This is the rubric's "orchestrating the visualisation from multiple tools".
+  - Ports are on localhost only, as for every other service.
+- **Considered:** building the dashboards by hand in the Grafana UI and exporting them, as in A4. With 56 panels, keeping the colours, styles and descriptions consistent by hand would be slow, and nothing would catch a mistyped metric.

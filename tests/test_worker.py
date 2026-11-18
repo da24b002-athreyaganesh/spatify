@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from prometheus_client import REGISTRY
 
 from spatify.worker.runner import DvcResult, follow
 from spatify.worker.worker import Worker, error_line
@@ -253,6 +254,21 @@ def test_a_removed_batch_brings_the_data_stages_up_to_date(repo):
     assert store.runs[1]["message"].startswith("Brought the data stages up to date")
 
 
+def test_a_removed_batch_dropped_in_again_is_checked_again(repo):
+    """The same file, same contents, back after removal: new data again (found in step 6.3)."""
+    drop(repo, "shifted_01.csv")
+    worker, store, dvc = make(repo, drifted={"shifted_01.csv"})
+    worker.step()
+    (repo / "data/incoming/shifted_01.csv").unlink()
+    worker.step()
+    assert store.batch_rows["shifted_01.csv"]["status"] == "removed"
+    drop(repo, "shifted_01.csv")  # identical contents
+    assert worker.step() is True
+    assert store.runs[-1]["trigger"] == "drift"  # checked, found drifted, retrained
+    assert store.batch_rows["shifted_01.csv"]["status"] == "processed"
+    assert worker.step() is False  # and only once
+
+
 def test_an_unexpected_error_fails_once_and_is_not_retried_at_full_speed(repo):
     drop(repo, "normal_01.csv")
     worker, store, _ = make(repo, add_fails=True)
@@ -304,3 +320,19 @@ def test_a_promotion_waits_for_the_model_server_and_records_the_time(repo):
     assert worker.served_calls == ["run-5"]  # the promoted candidate's training run
     assert run["stages"]["serving"] == {"status": "ok", "seconds": 12.0}
     assert "Serving it 12 s after registration" in run["message"]
+
+
+def test_stage_throughput_comes_from_the_stage_metrics_files(repo):
+    def throughput(stage):
+        return REGISTRY.get_sample_value("spatify_pipeline_stage_rows_per_second", {"stage": stage})
+
+    (repo / "metrics").mkdir()
+    (repo / "metrics/ingest.json").write_text(json.dumps({"rows": 100, "rows_per_s": 2500.0}))
+    worker, _, _ = make(repo)
+    assert throughput("ingest") == 2500.0  # known from the start, before any run
+
+    (repo / "metrics/features.json").write_text(json.dumps({"rows": 100, "rows_per_s": 900.0}))
+    drop(repo, "normal_01.csv")
+    worker.step()  # a run; afterwards the gauges are read again
+    assert throughput("features") == 900.0
+    assert REGISTRY.get_sample_value("spatify_pipeline_stage_rows", {"stage": "ingest"}) == 100

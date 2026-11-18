@@ -57,12 +57,19 @@ ERRORS_SHOWN = _metric(
 )
 
 
+_serving: set[int] = set()  # ports this process already serves /metrics on
+
+
 def start_metrics_server(port: int) -> bool:
-    """Serve /metrics on `port`; False if that fails (the app keeps working without it)."""
+    """Serve /metrics on `port`, once per process; False if that fails (the app keeps
+    working without it). A second call for the same port does nothing."""
+    if port in _serving:
+        return True
     try:
         start_http_server(port)
     except OSError:
         log.warning("Couldn't serve frontend metrics on port %d", port, exc_info=True)
         return False
+    _serving.add(port)
     log.info("Frontend metrics on port %d", port)
     return True

@@ -1,0 +1,1 @@
+gateway-1  | {"ts": "2026-11-18T11:03:50.306+00:00", "level": "WARNING", "logger": "spatify.gateway", "msg": "Alert DataDrift firing: New tracks differ from the training data", "status": "firing", "alert": {"alertname": "DataDrift", "instance": "worker:9102", "job": "worker", "project": "spatify", "severity": "warning"}}

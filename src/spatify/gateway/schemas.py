@@ -197,6 +197,35 @@ class DriftReport(BaseModel):
     feedback: FeedbackDrift | None = Field(None, description="The like rate: recent vs before")
 
 
+class AlertmanagerAlert(BaseModel):
+    """One alert in Alertmanager's webhook payload (the fields Spatify keeps)."""
+
+    status: Literal["firing", "resolved"]
+    labels: dict[str, str]
+    annotations: dict[str, str] = Field(default_factory=dict)
+    startsAt: datetime  # noqa: N815 (Alertmanager's field names)
+    endsAt: datetime | None = None  # noqa: N815
+    fingerprint: str = Field(min_length=1, max_length=64)
+
+
+class AlertmanagerWebhook(BaseModel):
+    """What Alertmanager posts to a webhook receiver; other fields are ignored."""
+
+    alerts: list[AlertmanagerAlert] = Field(max_length=500)
+
+
+class AlertRecord(BaseModel):
+    fingerprint: str
+    alertname: str
+    status: Literal["firing", "resolved"]
+    severity: str | None
+    summary: str | None
+    description: str | None
+    starts_at: datetime
+    ends_at: datetime | None = Field(description="Empty while firing")
+    received_at: datetime = Field(description="When the latest notice arrived")
+
+
 class TriggerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

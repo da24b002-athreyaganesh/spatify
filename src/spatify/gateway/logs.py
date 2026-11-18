@@ -7,7 +7,7 @@ import logging
 from datetime import UTC, datetime
 
 # Extra fields passed with `log.info(..., extra={...})` that are copied into the JSON.
-FIELDS = ("request_id", "method", "path", "status", "ms", "model_version", "detail")
+FIELDS = ("request_id", "method", "path", "status", "ms", "model_version", "detail", "alert")
 
 
 class JsonFormatter(logging.Formatter):
