@@ -26,7 +26,7 @@ One entry per design decision: what was chosen, why, and what else was considere
 - **Considered:** the Kaggle CLI, which needs an account token.
 
 ## D6. DVC for data and models, Git LFS for binary documents
-- **Why:** datasets, models and pipeline outputs change with the pipeline, so DVC versions them alongside `dvc.lock`. PDFs, screenshots and the demo video belong to the Git history, so they go in LFS (the L2 rule of thumb: large files that compress badly).
+- **Why:** datasets, models and pipeline outputs change with the pipeline, so DVC versions them alongside `dvc.lock`. PDFs and screenshots belong to the Git history, so they go in LFS (the L2 rule of thumb: large files that compress badly). The demo video is on Google Drive, linked from the README, rather than in the repo.
 - **Guard:** a pre-commit hook rejects any other file over 500 KB.
 
 ## D7. A local folder as the DVC remote (`Project/dvc-storage`, next to the repo)

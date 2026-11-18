@@ -1,5 +1,7 @@
 # Spatify
 
+
+
 Cold-start music recommendation with feedback-driven retraining and drift monitoring: an end-to-end AIOps system. DA3408 (AI Operations) course project.
 
 Spatify recommends songs that sound like a song you pick, or like the sliders you set, from audio features alone, so a new listener needs no history. Around that small model is the operational system the course is about:
@@ -10,6 +12,8 @@ Spatify recommends songs that sound like a song you pick, or like the sliders yo
 - **The app:** a web page for listeners, plus a console for operators.
 
 All of it runs as 11 Docker Compose services on one laptop.
+
+**Demo video (3 minutes):** [watch it on Google Drive](https://drive.google.com/PASTE_THE_SHARE_LINK_HERE)
 
 > **Most of the feedback is simulated.** Real listeners are few, so most likes and skips come from a documented user simulator (`scripts/simulate_users.py`, D38): simulated listeners with a hidden taste the system has to learn. The feedback-learning results show that the loop works, not what real listeners would gain.
 
